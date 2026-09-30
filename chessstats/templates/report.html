@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess opening report</title>
+<style>
+  :root {
+    --bg: #f6f6f3;
+    --surface: #ffffff;
+    --surface-2: #f0f0ec;
+    --text: #1c1c1e;
+    --muted: #6a6a70;
+    --border: #e2e2dc;
+    --accent: #2f6db3;
+    --win: #2f9a5a;
+    --draw: #a3a3a3;
+    --loss: #d4504b;
+    --bullet: #dd7f22;
+    --blitz: #2f6db3;
+    --rapid: #8a55d6;
+    --daily: #139c9c;
+    --sq-light: #eedcbc;
+    --sq-dark: #b88762;
+    --sq-highlight: rgba(246, 206, 72, 0.6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.04);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131315;
+      --surface: #1c1c1f;
+      --surface-2: #26262a;
+      --text: #ececee;
+      --muted: #9b9ba2;
+      --border: #303035;
+      --accent: #6aa4e8;
+      --win: #45b872;
+      --draw: #7d7d84;
+      --loss: #e5675f;
+      --blitz: #6aa4e8;
+      --shadow: none;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .page { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+  .segmented { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; }
+  .segmented button {
+    border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 500;
+    padding: 6px 12px; border-radius: 8px; cursor: pointer; text-transform: capitalize;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .segmented button:focus-visible, .tree-row:focus-visible, th button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .panel { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 14px; margin-bottom: 14px; }
+  .card-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .card-value { font-size: 26px; font-weight: 650; margin: 4px 0 2px; letter-spacing: -0.01em; }
+  .card-value.name { font-size: 17px; line-height: 1.3; }
+  .ratings { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+  .rating-item b { font-size: 20px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+
+  .wdl { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); margin: 8px 0 6px; }
+  .wdl span { display: block; height: 100%; }
+  .w { background: var(--win); } .d { background: var(--draw); } .l { background: var(--loss); }
+
+  .grid-2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+
+  .chart-wrap { position: relative; }
+  .chart-wrap svg { display: block; max-width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; font-size: 12px; color: var(--muted); text-transform: capitalize; }
+  .legend-note { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; text-transform: none; }
+  svg text { fill: var(--muted); font-size: 11px; }
+  .gridline { stroke: var(--border); }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); white-space: nowrap;
+  }
+  .empty { padding: 28px 0; text-align: center; color: var(--muted); }
+
+  .bars { display: grid; gap: 7px; }
+  .bar-row { display: grid; grid-template-columns: minmax(110px, 40%) 1fr; gap: 10px; align-items: center; font-size: 13px; }
+  .bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { display: flex; align-items: center; gap: 8px; }
+  .bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; }
+  .bar span { height: 100%; }
+  .bar-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 12px; }
+
+  .table-wrap { max-height: 440px; overflow: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  thead th { position: sticky; top: 0; background: var(--surface-2); z-index: 1; }
+  th button { border: 0; background: none; font: inherit; font-weight: 600; color: var(--text); cursor: pointer; padding: 0; }
+  th[aria-sort] button::after { content: " ↓"; color: var(--muted); }
+  th[aria-sort="ascending"] button::after { content: " ↑"; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .pill { display: inline-block; min-width: 54px; padding: 1px 7px; border-radius: 999px; color: #fff; font-weight: 600; font-size: 12px; text-align: center; }
+
+  .explorer { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .explorer { grid-template-columns: minmax(0, 1fr); } .board-panel { position: static; } }
+  .tree { list-style: none; margin: 0; padding: 0; font-variant-numeric: tabular-nums; }
+  .tree .tree { padding-left: 18px; border-left: 1px solid var(--border); margin-left: 9px; }
+  .tree-row {
+    display: grid; grid-template-columns: 18px minmax(0, 1fr) auto 64px; gap: 8px; align-items: center;
+    width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: left;
+    padding: 5px 8px; border-radius: 8px; cursor: pointer;
+  }
+  .tree-row:hover { background: var(--surface-2); }
+  .tree-row[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .caret { color: var(--muted); font-size: 11px; transition: transform .15s; display: inline-block; text-align: center; }
+  .tree-row[aria-expanded="true"] .caret { transform: rotate(90deg); }
+  .move { font-weight: 600; }
+  .opening-tag { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 13px; }
+  .opening-tag.named { color: var(--accent); font-weight: 500; }
+  .count { color: var(--muted); font-size: 12px; text-align: right; }
+  .score-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+  .score-bar span { display: block; height: 100%; border-radius: 3px; }
+  .other { color: var(--muted); font-size: 12px; padding: 4px 8px 4px 34px; }
+
+  .board-panel { position: sticky; top: 16px; }
+  .board-title { font-weight: 600; margin-bottom: 10px; word-wrap: break-word; }
+  .board { display: grid; grid-template-columns: repeat(8, 1fr); border-radius: 6px; overflow: hidden; container-type: inline-size; user-select: none; }
+  .sq { aspect-ratio: 1; position: relative; display: flex; align-items: center; justify-content: center; }
+  .sq.light { background: var(--sq-light); } .sq.dark { background: var(--sq-dark); }
+  .sq.hl::before { content: ""; position: absolute; inset: 0; background: var(--sq-highlight); }
+  .piece {
+    position: relative; font-size: 10.2cqw; line-height: 1;
+    font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif;
+    font-variant-emoji: text;
+  }
+  .piece.white { color: #fbfbfb; text-shadow: 1px 0 #262626, -1px 0 #262626, 0 1px #262626, 0 -1px #262626, 0 2px 3px rgba(0,0,0,.25); }
+  .piece.black { color: #1d1d1d; text-shadow: 0 0 1px rgba(255,255,255,.5), 0 2px 3px rgba(0,0,0,.25); }
+  .coord { position: absolute; font-size: 2.6cqw; font-weight: 600; opacity: .75; }
+  .coord.file { right: 4%; bottom: 2%; } .coord.rank { left: 4%; top: 2%; }
+  .sq.light .coord { color: var(--sq-dark); } .sq.dark .coord { color: var(--sq-light); }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; text-align: center; }
+  .stat-grid div { background: var(--surface-2); border-radius: 8px; padding: 6px; }
+  .stat-grid b { display: block; font-size: 17px; }
+  .games-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
+  .games-list a { display: flex; gap: 8px; align-items: center; color: inherit; text-decoration: none; padding: 5px 8px; border-radius: 8px; }
+  .games-list a:hover { background: var(--surface-2); }
+  .result { width: 20px; height: 20px; flex: none; border-radius: 5px; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+  .games-list .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  footer { margin-top: 24px; text-align: center; }
+
+  /* search bar */
+  .search { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 22px; padding: 12px 14px; }
+  .brand { font-weight: 700; letter-spacing: -0.01em; margin-right: auto; display: flex; align-items: center; gap: 8px; }
+  .brand-mark { font-size: 20px; line-height: 1; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", serif; }
+  .search form { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 420px; justify-content: flex-end; }
+  .search input, .search select {
+    font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 7px 11px; min-width: 0;
+  }
+  .search input { flex: 1 1 200px; max-width: 320px; }
+  .search input:focus, .search select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .btn {
+    font: inherit; font-weight: 600; border: 0; border-radius: 9px; padding: 7px 16px; cursor: pointer;
+    background: var(--accent); color: #fff;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .notice { margin: -12px 0 18px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+  .notice.info { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .notice.error { background: color-mix(in srgb, var(--loss) 14%, transparent); }
+  .notice code { font-size: 12px; background: var(--surface); padding: 1px 5px; border-radius: 5px; }
+  .welcome { text-align: center; padding: 72px 20px; }
+  .welcome .big { font-size: 56px; line-height: 1; margin-bottom: 14px; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", serif; }
+  .welcome h1 { margin-bottom: 8px; }
+
+  /* loading screen */
+  .loading {
+    position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px;
+    background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(6px);
+  }
+  .loading-card { width: min(380px, 100%); text-align: center; padding: 28px 26px; }
+  .loader { display: grid; grid-template-columns: repeat(4, 16px); gap: 0; justify-content: center; margin: 0 auto 18px; }
+  .loader span { width: 16px; height: 16px; background: var(--sq-light); animation: pulse 1.4s ease-in-out infinite; }
+  .loader span.dark { background: var(--sq-dark); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .loader span { animation: none; } }
+  .loading-title { font-weight: 650; font-size: 17px; margin-bottom: 4px; overflow-wrap: anywhere; }
+  .progress { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin: 16px 0 8px; }
+  .progress span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .3s; }
+  .progress.indeterminate span { width: 35%; animation: slide 1.1s ease-in-out infinite; }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 600px) { .panel { padding: 14px; } h1 { font-size: 23px; } .search input { max-width: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="panel search">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">♞&#xFE0E;</span> Chess opening report</div>
+    <form id="search-form" role="search" autocomplete="off">
+      <label class="visually-hidden" for="search-user">chess.com username</label>
+      <input id="search-user" name="user" placeholder="chess.com username" spellcheck="false" required
+             pattern="[A-Za-z0-9_\-]{1,50}" title="Letters, numbers, - and _">
+      <label class="visually-hidden" for="search-range">Games to include</label>
+      <select id="search-range" name="range"></select>
+      <button class="btn" type="submit">Look up</button>
+    </form>
+  </div>
+  <div id="notice" class="notice" hidden></div>
+
+  <section class="welcome" id="welcome" hidden>
+    <div class="big" aria-hidden="true">♚&#xFE0E;</div>
+    <h1>Look up a chess.com player</h1>
+    <p class="muted">Enter a username above to see their openings, ratings and opening tree.</p>
+  </section>
+
+  <main id="report">
+  <header class="top">
+    <div>
+      <h1 id="player"></h1>
+      <div id="subtitle" class="muted"></div>
+    </div>
+    <div class="controls">
+      <div class="segmented" id="tc-filter" role="group" aria-label="Game speed"></div>
+      <div class="segmented" id="color-filter" role="group" aria-label="Colour"></div>
+    </div>
+  </header>
+
+  <section class="cards" id="cards"></section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <h2>Rating over time</h2>
+      <div class="legend" id="rating-legend"></div>
+      <div class="chart-wrap" id="rating-chart"></div>
+    </div>
+    <div class="panel">
+      <h2 id="bars-title">Most played openings</h2>
+      <div class="bars" id="opening-bars"></div>
+      <div class="bar-legend">
+        <span><span class="dot w"></span>Win</span><span><span class="dot d"></span>Draw</span><span><span class="dot l"></span>Loss</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-bottom:14px">
+    <h2 id="table-title">Openings</h2>
+    <div class="table-wrap" id="openings-table"></div>
+  </section>
+
+  <section class="explorer">
+    <div class="panel">
+      <h2 id="tree-title">Opening tree</h2>
+      <p class="muted small" id="tree-help" style="margin:-6px 0 12px"></p>
+      <div id="tree"></div>
+    </div>
+    <aside class="panel board-panel" id="board-panel"></aside>
+  </section>
+
+  <footer class="muted small" id="footer"></footer>
+  </main>
+</div>
+
+<div class="loading" id="loading" role="status" aria-live="polite" hidden>
+  <div class="panel loading-card">
+    <div class="loader" id="loader" aria-hidden="true"></div>
+    <div class="loading-title" id="loading-title">Loading</div>
+    <div class="muted small" id="loading-range"></div>
+    <div class="progress indeterminate" id="loading-progress"><span></span></div>
+    <div class="muted small" id="loading-status">Contacting chess.com…</div>
+  </div>
+</div>
+
+<script id="config" type="application/json">__CHESSSTATS_CONFIG__</script>
+<script id="data" type="application/json">__CHESSSTATS_DATA__</script>
+<script>
+"use strict";
+const CONFIG = JSON.parse(document.getElementById("config").textContent);
+let DATA = JSON.parse(document.getElementById("data").textContent); // null until a player is loaded
+const state = { tc: "all", color: "white", sort: { key: "games", dir: -1 }, selected: null };
+const TC_COLORS = { bullet: "var(--bullet)", blitz: "var(--blitz)", rapid: "var(--rapid)", daily: "var(--daily)" };
+const PIECES = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+const RESULT_LABEL = { win: "W", draw: "D", loss: "L" };
+const RESULT_COLOR = { win: "var(--win)", draw: "var(--draw)", loss: "var(--loss)" };
+const DAY = 86400000;
+const RATING_GAP = 30 * DAY; // longer than this without a rated game shows as a flat, unchanged rating
+
+// ---------- small helpers ----------
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value === null || value === undefined || value === false) continue;
+    if (key === "class") node.className = value;
+    else if (key === "style") node.style.cssText = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else node.setAttribute(key, value === true ? "" : value);
+  }
+  for (const child of children.flat()) {
+    if (child === null || child === undefined || child === false) continue;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+function svg(tag, attrs = {}) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  return node;
+}
+const fmt = (n) => Number(n).toLocaleString();
+const pct = (n) => `${Number(n).toFixed(1)}%`;
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const score = (w, d, n) => (n ? (100 * (w + 0.5 * d)) / n : 0);
+function scoreColor(value) {
+  // 30% or less is red, 70% or more is green.
+  const t = Math.min(1, Math.max(0, (value - 30) / 40));
+  return `hsl(${Math.round(t * 125)}, 58%, 44%)`;
+}
+function formatDate(iso) {
+  return new Date(iso + "T00:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+function wdlBar(w, d, l) {
+  const n = w + d + l || 1;
+  return el("div", { class: "wdl", title: `${w} wins, ${d} draws, ${l} losses` },
+    el("span", { class: "w", style: `width:${(100 * w) / n}%` }),
+    el("span", { class: "d", style: `width:${(100 * d) / n}%` }),
+    el("span", { class: "l", style: `width:${(100 * l) / n}%` }));
+}
+const view = () => DATA.views[state.tc];
+const side = () => view()[state.color];
+
+// ---------- header and filters ----------
+function renderHeader() {
+  document.title = `${DATA.player} · chess opening report`;
+  document.getElementById("player").textContent = DATA.player;
+  const range = DATA.firstDate ? `${formatDate(DATA.firstDate)} – ${formatDate(DATA.lastDate)}` : "no games";
+  const scope = DATA.rangeLabel ? `${DATA.rangeLabel} · ` : "";
+  document.getElementById("subtitle").textContent = `${fmt(DATA.totalGames)} standard games · ${scope}${range}`;
+  document.getElementById("footer").textContent =
+    `Generated ${new Date(DATA.generated).toLocaleString()} from chess.com data by chessstats.`;
+}
+function renderFilters() {
+  const make = (id, options, key) => {
+    const box = document.getElementById(id);
+    box.replaceChildren(...options.map((option) => el("button", {
+      type: "button",
+      "aria-pressed": String(state[key] === option),
+      onclick: () => { state[key] = option; state.selected = null; renderAll(); },
+    }, option === "all" ? "All speeds" : option)));
+  };
+  make("tc-filter", DATA.timeClasses, "tc");
+  make("color-filter", ["white", "black"], "color");
+}
+
+// ---------- summary cards ----------
+function renderCards() {
+  const v = view();
+  const cards = document.getElementById("cards");
+  const card = (label, ...body) => el("div", { class: "panel" }, el("div", { class: "card-label" }, label), ...body);
+
+  const colorScore = (c) => {
+    const rows = v[c].openings;
+    const w = rows.reduce((a, r) => a + r.wins, 0), d = rows.reduce((a, r) => a + r.draws, 0);
+    return v[c].games ? pct(score(w, d, v[c].games)) : "–";
+  };
+
+  const speeds = state.tc === "all" ? Object.keys(DATA.ratings) : [state.tc].filter((t) => DATA.ratings[t]);
+  const ratingItems = speeds.map((tc) => {
+    const points = DATA.ratings[tc];
+    const peak = Math.max(...points.map((p) => p[1]));
+    return el("div", { class: "rating-item", title: `Peak ${peak}` },
+      el("span", { class: "dot", style: `background:${TC_COLORS[tc] || "var(--muted)"}` }),
+      el("span", { class: "muted small" }, cap(tc), " "), el("b", {}, points[points.length - 1][1]));
+  });
+
+  const openingCard = (label, row) => card(label, row
+    ? [el("div", { class: "card-value name" }, row.opening),
+       el("div", { class: "muted small" }, `as ${cap(row.color)} · ${pct(row.scorePct)} score · ${fmt(row.games)} games`)]
+    : el("div", { class: "muted small", style: "margin-top:8px" }, `Needs an opening with ${DATA.bestWorstMinGames}+ games`));
+
+  cards.replaceChildren(
+    card("Record",
+      el("div", { class: "card-value" }, `${fmt(v.games)} games`),
+      wdlBar(v.wins, v.draws, v.losses),
+      el("div", { class: "muted small" }, `${fmt(v.wins)} W · ${fmt(v.draws)} D · ${fmt(v.losses)} L`)),
+    card("Score",
+      el("div", { class: "card-value" }, v.games ? pct(score(v.wins, v.draws, v.games)) : "–"),
+      el("div", { class: "muted small" }, `White ${colorScore("white")} · Black ${colorScore("black")}`)),
+    card("Current rating", ratingItems.length ? el("div", { class: "ratings" }, ratingItems)
+      : el("div", { class: "muted small", style: "margin-top:8px" }, "No rated games")),
+    openingCard("Best opening", v.best),
+    openingCard("Worst opening", v.worst),
+  );
+}
+
+// ---------- rating chart ----------
+function niceStep(range, target) {
+  const raw = range / target;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * pow >= raw) return m * pow;
+  return 10 * pow;
+}
+function renderRatingChart() {
+  const wrap = document.getElementById("rating-chart");
+  const legend = document.getElementById("rating-legend");
+  const speeds = (state.tc === "all" ? Object.keys(DATA.ratings) : [state.tc]).filter((t) => DATA.ratings[t]);
+  legend.replaceChildren(...speeds.map((tc) =>
+    el("span", {}, el("span", { class: "dot", style: `background:${TC_COLORS[tc] || "var(--muted)"}` }), tc)));
+  if (!speeds.length) { wrap.replaceChildren(el("div", { class: "empty" }, "No rated games for this speed")); return; }
+
+  const series = speeds.map((tc) => ({
+    tc, color: TC_COLORS[tc] || "var(--muted)",
+    points: DATA.ratings[tc].map(([day, rating]) => ({ t: Date.parse(day + "T00:00:00Z"), r: rating, day })),
+  }));
+  const all = series.flatMap((s) => s.points);
+  const width = Math.max(280, wrap.clientWidth), height = 250;
+  const m = { l: 42, r: 12, t: 10, b: 26 };
+  let t0 = Math.min(...all.map((p) => p.t)), t1 = Math.max(...all.map((p) => p.t));
+  if (t0 === t1) { t0 -= 86400000 * 15; t1 += 86400000 * 15; }
+  const yStep = niceStep(Math.max(50, Math.max(...all.map((p) => p.r)) - Math.min(...all.map((p) => p.r))), 5);
+  const r0 = Math.floor(Math.min(...all.map((p) => p.r)) / yStep) * yStep;
+  const r1 = Math.ceil(Math.max(...all.map((p) => p.r)) / yStep) * yStep || r0 + yStep;
+  const x = (t) => m.l + ((t - t0) / (t1 - t0)) * (width - m.l - m.r);
+  const y = (r) => height - m.b - ((r - r0) / (r1 - r0 || 1)) * (height - m.t - m.b);
+
+  const chart = svg("svg", { width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Rating over time" });
+  for (let r = r0; r <= r1 + 1e-9; r += yStep) {
+    chart.append(svg("line", { class: "gridline", x1: m.l, x2: width - m.r, y1: y(r), y2: y(r) }));
+    const label = svg("text", { x: m.l - 8, y: y(r) + 4, "text-anchor": "end" });
+    label.textContent = Math.round(r);
+    chart.append(label);
+  }
+  const spanYears = (t1 - t0) / (365.25 * 86400000);
+  const monthStep = spanYears > 3 ? 12 : spanYears > 1.5 ? 6 : spanYears > 0.5 ? 3 : 1;
+  const start = new Date(t0);
+  let tick = new Date(Date.UTC(start.getUTCFullYear(), Math.ceil(start.getUTCMonth() / monthStep) * monthStep, 1));
+  while (tick.getTime() <= t1) {
+    if (tick.getTime() >= t0) {
+      const label = svg("text", { x: x(tick.getTime()), y: height - 6, "text-anchor": "middle" });
+      label.textContent = monthStep === 12
+        ? tick.getUTCFullYear()
+        : tick.toLocaleDateString(undefined, { month: "short", year: "2-digit", timeZone: "UTC" });
+      chart.append(label);
+    }
+    tick = new Date(Date.UTC(tick.getUTCFullYear(), tick.getUTCMonth() + monthStep, 1));
+  }
+  // After a month or more with no rated games the rating didn't change, so draw that stretch as a
+  // flat dashed line at the old rating, then step to the new one.
+  let anyGap = false;
+  for (const s of series) {
+    if (s.points.length === 1) {
+      chart.append(svg("circle", { cx: x(s.points[0].t), cy: y(s.points[0].r), r: 3.5, fill: s.color }));
+      continue;
+    }
+    let solid = "", dashed = "";
+    s.points.forEach((p, i) => {
+      const prev = s.points[i - 1];
+      const px = x(p.t).toFixed(1), py = y(p.r).toFixed(1);
+      if (prev && p.t - prev.t > RATING_GAP) {
+        const flatY = y(prev.r).toFixed(1);
+        dashed += `M${x(prev.t).toFixed(1)},${flatY}L${px},${flatY}L${px},${py}`;
+        anyGap = true;
+      }
+      solid += `${!prev || p.t - prev.t > RATING_GAP ? "M" : "L"}${px},${py}`;
+    });
+    const line = { fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" };
+    if (dashed) chart.append(svg("path", { ...line, d: dashed, "stroke-dasharray": "5 5", "stroke-opacity": 0.75 }));
+    chart.append(svg("path", { ...line, d: solid }));
+  }
+  if (anyGap) {
+    const sample = svg("svg", { width: 22, height: 8, "aria-hidden": "true" });
+    sample.append(svg("line", { x1: 1, x2: 21, y1: 4, y2: 4, stroke: "var(--muted)", "stroke-width": 2, "stroke-dasharray": "4 3" }));
+    legend.append(el("span", { class: "legend-note" }, sample, "no rated games, rating unchanged"));
+  }
+
+  const cursor = svg("line", { y1: m.t, y2: height - m.b, stroke: "var(--muted)", "stroke-dasharray": "3 3", visibility: "hidden" });
+  const dots = series.map((s) => svg("circle", { r: 4, fill: s.color, stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" }));
+  chart.append(cursor, ...dots);
+  const tip = el("div", { class: "tooltip", hidden: true });
+  const overlay = svg("rect", { x: m.l, y: m.t, width: width - m.l - m.r, height: height - m.t - m.b, fill: "transparent" });
+  overlay.addEventListener("mousemove", (event) => {
+    const box = chart.getBoundingClientRect();
+    const t = t0 + ((event.clientX - box.left - m.l) / (width - m.l - m.r)) * (t1 - t0);
+    const lines = [];
+    let anchorX = null;
+    series.forEach((s, i) => {
+      const inRange = t >= s.points[0].t - 20 * DAY && t <= s.points[s.points.length - 1].t + 20 * DAY;
+      dots[i].setAttribute("visibility", inRange ? "visible" : "hidden");
+      if (!inRange) return;
+      // Inside a flat stretch, show the rating that was in effect then; elsewhere the nearest day played.
+      const after = s.points.findIndex((p) => p.t > t);
+      const before = after === -1 ? s.points[s.points.length - 1] : s.points[after - 1];
+      const inGap = before && after !== -1 && s.points[after].t - before.t > RATING_GAP && t - before.t > DAY;
+      const point = inGap ? before : s.points.reduce((best, p) => (Math.abs(p.t - t) < Math.abs(best.t - t) ? p : best));
+      const px = inGap ? x(t) : x(point.t);
+      dots[i].setAttribute("cx", px);
+      dots[i].setAttribute("cy", y(point.r));
+      anchorX = anchorX ?? px;
+      const when = inGap ? `unchanged since ${formatDate(point.day)}` : formatDate(point.day);
+      lines.push(el("div", {}, el("span", { class: "dot", style: `background:${s.color}` }), `${cap(s.tc)} `, el("b", {}, point.r),
+        el("span", { class: "muted" }, ` · ${when}`)));
+    });
+    if (!lines.length) { tip.hidden = true; cursor.setAttribute("visibility", "hidden"); return; }
+    cursor.setAttribute("x1", anchorX); cursor.setAttribute("x2", anchorX); cursor.setAttribute("visibility", "visible");
+    tip.replaceChildren(...lines);
+    tip.hidden = false;
+    const left = anchorX + 12 + tip.offsetWidth > width ? anchorX - 12 - tip.offsetWidth : anchorX + 12;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${m.t}px`;
+  });
+  overlay.addEventListener("mouseleave", () => {
+    tip.hidden = true; cursor.setAttribute("visibility", "hidden");
+    dots.forEach((d) => d.setAttribute("visibility", "hidden"));
+  });
+  chart.append(overlay);
+  wrap.replaceChildren(chart, tip);
+}
+
+// ---------- opening bar chart ----------
+function renderOpeningBars() {
+  const rows = side().openings.slice(0, 10);
+  document.getElementById("bars-title").textContent = `Most played openings as ${cap(state.color)}`;
+  const box = document.getElementById("opening-bars");
+  if (!rows.length) { box.replaceChildren(el("div", { class: "empty" }, "No games")); return; }
+  const max = rows[0].games;
+  box.replaceChildren(...rows.map((r) => el("div", { class: "bar-row" },
+    el("div", { class: "bar-name", title: r.opening }, r.opening),
+    el("div", { class: "bar-track" },
+      el("div", { class: "bar", style: `width:${Math.max(4, (82 * r.games) / max)}%`,
+        title: `${r.opening}: ${r.wins} W / ${r.draws} D / ${r.losses} L (${pct(r.scorePct)} score)` },
+        el("span", { class: "w", style: `width:${(100 * r.wins) / r.games}%` }),
+        el("span", { class: "d", style: `width:${(100 * r.draws) / r.games}%` }),
+        el("span", { class: "l", style: `width:${(100 * r.losses) / r.games}%` })),
+      el("span", { class: "muted small" }, r.games)))));
+}
+
+// ---------- openings table ----------
+const COLUMNS = [
+  { key: "opening", label: "Opening", text: true },
+  { key: "games", label: "Games" },
+  { key: "wins", label: "W" },
+  { key: "draws", label: "D" },
+  { key: "losses", label: "L" },
+  { key: "winPct", label: "Win %" },
+  { key: "scorePct", label: "Score %" },
+  { key: "avgOpp", label: "Opp. avg" },
+];
+function renderTable() {
+  document.getElementById("table-title").textContent = `Openings as ${cap(state.color)}`;
+  const box = document.getElementById("openings-table");
+  const { key, dir } = state.sort;
+  const rows = [...side().openings].sort((a, b) =>
+    (typeof a[key] === "string" ? a[key].localeCompare(b[key]) : a[key] - b[key]) * dir || b.games - a.games);
+  if (!rows.length) { box.replaceChildren(el("div", { class: "empty" }, "No games")); return; }
+  const head = el("tr", {}, COLUMNS.map((c) => el("th", {
+    scope: "col", "aria-sort": c.key === key ? (dir > 0 ? "ascending" : "descending") : null,
+  }, el("button", { type: "button", onclick: () => {
+    state.sort = { key: c.key, dir: c.key === key ? -dir : c.text ? 1 : -1 };
+    renderTable();
+  } }, c.label))));
+  const body = rows.map((r) => el("tr", {},
+    el("td", {}, r.opening), el("td", {}, fmt(r.games)), el("td", {}, r.wins), el("td", {}, r.draws), el("td", {}, r.losses),
+    el("td", {}, pct(r.winPct)),
+    el("td", {}, el("span", { class: "pill", style: `background:${scoreColor(r.scorePct)}` }, pct(r.scorePct))),
+    el("td", {}, fmt(r.avgOpp))));
+  box.replaceChildren(el("table", {}, el("thead", {}, head), el("tbody", {}, body)));
+}
+
+// ---------- opening tree ----------
+function openingTag(node) {
+  if (node.family) return el("span", { class: "opening-tag named" }, node.family);
+  if (!node.children.length) return el("span", { class: "opening-tag" }, `mixed · mostly ${node.topFamily} (${Math.round(node.topShare * 100)}%)`);
+  return null;
+}
+function treeList(nodes, other) {
+  const list = el("ul", { class: "tree", role: "group" });
+  for (const node of nodes) {
+    const hasChildren = node.children.length > 0;
+    const row = el("button", {
+      type: "button", class: "tree-row", role: "treeitem",
+      "aria-expanded": hasChildren ? "false" : null, "aria-selected": "false",
+      title: `${node.line}: ${node.wins} W / ${node.draws} D / ${node.losses} L`,
+    },
+      el("span", { class: "caret" }, hasChildren ? "▶" : ""),
+      el("span", {}, el("span", { class: "move" }, node.label), openingTag(node)),
+      el("span", { class: "count" }, fmt(node.games)),
+      el("div", { class: "score-bar", title: `${pct(node.scorePct)} score` },
+        el("span", { style: `width:${node.scorePct}%;background:${scoreColor(node.scorePct)}` })));
+    const item = el("li", {}, row);
+    let children = null;
+    if (hasChildren) {
+      children = treeList(node.children, node.other);
+      children.hidden = true;
+      item.append(children);
+    }
+    const setOpen = (open) => {
+      if (!children) return;
+      children.hidden = !open;
+      row.setAttribute("aria-expanded", String(open));
+    };
+    // The arrow only opens/closes. The move selects it and opens it; a second click closes it.
+    row.addEventListener("click", (event) => {
+      if (event.target.classList.contains("caret")) return setOpen(children && children.hidden);
+      if (row.getAttribute("aria-selected") === "true") return setOpen(children && children.hidden);
+      selectNode(node, row);
+      setOpen(true);
+    });
+    list.append(item);
+  }
+  if (other) list.append(el("li", { class: "other" }, `+ ${other.lines} other line${other.lines === 1 ? "" : "s"} · ${fmt(other.games)} games`));
+  return list;
+}
+function renderTree() {
+  const s = side();
+  document.getElementById("tree-title").textContent = `Opening tree as ${cap(state.color)}`;
+  document.getElementById("tree-help").textContent =
+    `Click a move to see the position. Branches stop where the opening is decided; lines with fewer than ${DATA.minGames} games are grouped.`;
+  const box = document.getElementById("tree");
+  if (!s.tree.length) {
+    box.replaceChildren(el("div", { class: "empty" }, `No lines with at least ${DATA.minGames} games`));
+    renderBoardPanel(null);
+    return;
+  }
+  const list = treeList(s.tree, s.otherFirstMoves);
+  list.setAttribute("role", "tree");
+  box.replaceChildren(list);
+  const first = list.querySelector(".tree-row");
+  selectNode(s.tree[0], first);
+}
+function selectNode(node, row) {
+  document.querySelectorAll('.tree-row[aria-selected="true"]').forEach((r) => r.setAttribute("aria-selected", "false"));
+  row.setAttribute("aria-selected", "true");
+  state.selected = node;
+  renderBoardPanel(node);
+}
+
+// ---------- board ----------
+function boardFromFen(fen) {
+  const rows = fen.split(" ")[0].split("/");
+  return rows.map((row) => {
+    const squares = [];
+    for (const ch of row) {
+      if (/\d/.test(ch)) for (let i = 0; i < Number(ch); i++) squares.push(null);
+      else squares.push(ch);
+    }
+    return squares; // rows[0] is rank 8, squares[0] is file a
+  });
+}
+function renderBoard(fen, lastMove, flipped) {
+  const grid = boardFromFen(fen);
+  const files = "abcdefgh";
+  const board = el("div", { class: "board", role: "img", "aria-label": `Board position ${fen}` });
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      const rank = flipped ? i + 1 : 8 - i;
+      const file = flipped ? 7 - j : j;
+      const name = files[file] + rank;
+      const piece = grid[8 - rank][file];
+      const light = (file + rank) % 2 === 1;
+      const square = el("div", { class: `sq ${light ? "light" : "dark"}${lastMove && lastMove.includes(name) ? " hl" : ""}` });
+      if (piece) {
+        const white = piece === piece.toUpperCase();
+        square.append(el("span", { class: `piece ${white ? "white" : "black"}` }, PIECES[piece.toLowerCase()] + "︎"));
+      }
+      if (i === 7) square.append(el("span", { class: "coord file" }, files[file]));
+      if (j === 0) square.append(el("span", { class: "coord rank" }, rank));
+      board.append(square);
+    }
+  }
+  return board;
+}
+function renderBoardPanel(node) {
+  const panel = document.getElementById("board-panel");
+  if (!node) { panel.replaceChildren(el("div", { class: "empty" }, "Nothing to show")); return; }
+  const opening = node.family
+    ? el("div", { class: "opening-tag named", style: "margin:0" }, node.family)
+    : el("div", { class: "muted small" }, `Mixed: mostly ${node.topFamily} (${Math.round(node.topShare * 100)}% of games)`);
+  const games = node.recent.filter((g) => /^https:\/\/www\.chess\.com\//.test(g.url)).map((g) => el("li", {},
+    el("a", { href: g.url, target: "_blank", rel: "noopener noreferrer" },
+      el("span", { class: "result", style: `background:${RESULT_COLOR[g.result]}` }, RESULT_LABEL[g.result]),
+      el("span", { class: "grow" }, `vs ${g.opponent || "unknown"} (${g.oppRating})`),
+      el("span", { class: "muted small" }, `${cap(g.timeClass)} · ${formatDate(g.date)}`))));
+  panel.replaceChildren(
+    el("div", { class: "board-title" }, node.line),
+    node.fen ? renderBoard(node.fen, node.lastMove, state.color === "black")
+      : el("div", { class: "empty" }, "Position unavailable"),
+    el("div", { class: "stat-grid" },
+      el("div", {}, el("b", {}, fmt(node.games)), el("span", { class: "muted small" }, "games")),
+      el("div", {}, el("b", { style: `color:${scoreColor(node.scorePct)}` }, pct(node.scorePct)), el("span", { class: "muted small" }, "score")),
+      el("div", {}, el("b", {}, `${node.wins}/${node.draws}/${node.losses}`), el("span", { class: "muted small" }, "W / D / L"))),
+    opening,
+    ...(games.length
+      ? [el("div", { class: "card-label", style: "margin-top:16px" }, "Recent games"), el("ul", { class: "games-list" }, games)]
+      : []));
+}
+
+// ---------- wiring ----------
+function renderAll() {
+  renderFilters();
+  renderCards();
+  renderRatingChart();
+  renderOpeningBars();
+  renderTable();
+  renderTree();
+}
+function showReport() {
+  document.getElementById("report").hidden = !DATA;
+  document.getElementById("welcome").hidden = !!DATA;
+  if (!DATA) return;
+  renderHeader();
+  renderAll();
+}
+
+// ---------- player search ----------
+const searchForm = document.getElementById("search-form");
+const searchUser = document.getElementById("search-user");
+const searchRange = document.getElementById("search-range");
+searchRange.replaceChildren(...Object.entries(CONFIG.ranges).map(([key, label]) => el("option", { value: key }, label)));
+searchRange.value = CONFIG.defaultRange;
+
+function showNotice(kind, ...content) {
+  const notice = document.getElementById("notice");
+  notice.className = `notice ${kind}`;
+  notice.replaceChildren(...content);
+  notice.hidden = content.length === 0;
+}
+
+searchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const user = searchUser.value.trim();
+  if (!user) return;
+  if (!CONFIG.server) {
+    showNotice("info", "Looking up other players needs the chessstats server running. In a terminal, run ",
+      el("code", {}, "python -m chessstats --serve --open"), " and search from the page it opens.");
+    return;
+  }
+  lookUp(user, searchRange.value);
+});
+
+async function lookUp(user, range) {
+  showNotice("info");
+  showLoading(user, CONFIG.ranges[range]);
+  const query = `user=${encodeURIComponent(user)}&range=${encodeURIComponent(range)}`;
+  let finished = false;
+  (async () => { // poll download progress while the report is being built
+    while (!finished) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (finished) break;
+      try {
+        const progress = await (await fetch(`/api/progress?user=${encodeURIComponent(user)}`)).json();
+        if (!finished) updateLoading(progress);
+      } catch { /* the report request reports real errors */ }
+    }
+  })();
+  try {
+    const response = await fetch(`/api/report?${query}`);
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+    DATA = body;
+    Object.assign(state, { tc: "all", color: "white", selected: null });
+    searchUser.value = DATA.player;
+    history.replaceState(null, "", `?${query}`);
+    showReport();
+    window.scrollTo(0, 0);
+  } catch (error) {
+    const message = error instanceof TypeError ? "Could not reach the chessstats server. Is it still running?" : error.message;
+    showNotice("error", message);
+  } finally {
+    finished = true;
+    hideLoading();
+  }
+}
+
+// ---------- loading screen ----------
+const loadingEl = document.getElementById("loading");
+document.getElementById("loader").replaceChildren(...Array.from({ length: 16 }, (_, i) => {
+  const row = Math.floor(i / 4), col = i % 4;
+  return el("span", { class: (row + col) % 2 ? "dark" : null, style: `animation-delay:${(row + col) * 0.12}s` });
+}));
+function showLoading(user, rangeLabel) {
+  document.getElementById("loading-title").textContent = `Loading ${user}`;
+  document.getElementById("loading-range").textContent = rangeLabel ? `${rangeLabel} · standard chess` : "";
+  document.getElementById("loading-progress").className = "progress indeterminate";
+  document.getElementById("loading-progress").firstElementChild.style.width = "";
+  document.getElementById("loading-status").textContent = "Contacting chess.com…";
+  loadingEl.hidden = false;
+}
+function updateLoading(progress) {
+  if (!progress.total) return;
+  const bar = document.getElementById("loading-progress");
+  bar.className = "progress";
+  bar.firstElementChild.style.width = `${(100 * progress.done) / progress.total}%`;
+  document.getElementById("loading-status").textContent = progress.done < progress.total
+    ? `Downloading month ${progress.done + 1} of ${progress.total}…`
+    : "Analysing games…";
+}
+function hideLoading() {
+  loadingEl.hidden = true;
+}
+
+// ---------- start ----------
+if (DATA) searchUser.value = DATA.player;
+showReport();
+if (CONFIG.server) {
+  const params = new URLSearchParams(location.search);
+  if (CONFIG.ranges[params.get("range")]) searchRange.value = params.get("range");
+  if (params.get("user")) {
+    searchUser.value = params.get("user");
+    lookUp(params.get("user"), searchRange.value);
+  } else {
+    searchUser.focus();
+  }
+}
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => DATA && renderRatingChart(), 150);
+});
+</script>
+</body>
+</html>

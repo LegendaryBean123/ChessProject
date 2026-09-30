@@ -1,0 +1,129 @@
+# Chess Opening Stats Analyzer — Plan
+
+Download every game a chess.com player has played and report their most-played
+openings with win/draw/loss records.
+
+## Decisions
+- **Interface:** command line first (a web UI is a later extension).
+- **Grouping:** by opening *family* ("Four Knights Game"); exact variations come later via `--detailed`.
+- **Language:** Python 3, `requests` for HTTP, `pytest` for tests.
+
+## Target output (v1)
+```
+> python -m chessstats LegendaryBean123
+Downloading archives... 30 months (29 cached, 1 fetched)
+Analyzed 2,450 games (standard chess only)
+
+Most played openings, as White
+  Opening                          Games   W / D / L     Win%
+  Italian Game                       312   160/ 8/144    51.3%
+```
+
+## Architecture
+Each layer has one job and only talks to the layer below it.
+
+```
+chessstats/
+  api.py        # Layer 1: HTTP to chess.com (User-Agent, 429 backoff, ETags)
+  storage.py    # Layer 2: monthly JSON cache on disk; decides what to fetch
+  models.py     # Layer 3: raw JSON -> Game objects from the player's point of view
+  analysis.py   # Layer 4: pure functions, Games -> opening stats
+  tree.py       # Layer 4: Games -> move tree that stops where the opening is decided
+  report.py     # Layer 5: prints tables and trees
+  html_report.py        # Layer 5: builds the HTML report's data (positions via python-chess)
+  templates/report.html # the report page: layout, CSS and JavaScript, no external files
+  pipeline.py   # download + parse one player's games; shared by the CLI and the server
+  server.py     # --serve: local website with a player search (JSON API over the pipeline)
+  __main__.py   # glue: argparse + pipeline
+tests/
+data/           # cache (git-ignored)
+```
+
+## Phases
+Each phase ends with something runnable. Finish the checkpoint before moving on.
+
+- [x] **Phase 0: Setup.** Create the venv, requirements, .gitignore and package skeleton.
+  *Checkpoint:* `python -m chessstats` runs.
+- [x] **Phase 1: API client** (`api.py`). `ChessComClient` with `get_profile`,
+  `get_archives`, `get_month(url, etag)`; raises `PlayerNotFound` on 404; retries 429 with backoff.
+  *Checkpoint:* print the archive list for any username.
+- [x] **Phase 2: Cache** (`storage.py`). Save to `data/{user}/{YYYY-MM}.json` with its ETag.
+  A month is final once it was downloaded more than an hour after it ended; final months are read
+  from disk with no request, and anything else is revalidated with `If-None-Match`. Fetch serially.
+  *Checkpoint:* the second run makes about 2 requests. ✔ 2 requests, 0.1s.
+- [x] **Phase 3: Parse** (`models.py`). Normalise results to win/draw/loss from the player's side;
+  get the opening name from the `eco` URL; `opening_family()` ends the name at the first
+  Opening/Game/Defense/Gambit/Attack/System word (keeping Accepted/Declined) and merges chess.com's
+  split names (Giuoco Piano → Italian Game, Alapin/Closed Sicilian → Sicilian Defense);
+  keep only `rules == "chess"`; a missing or "Undefined" eco becomes "Unknown".
+  *Checkpoint:* unit tests using a saved month as a fixture. ✔ `tests/fixtures/month.json`
+- [x] **Phase 4: Analysis** (`analysis.py`). Per family and colour: games, W/D/L, win %,
+  score % (win = 1, draw = 0.5), average opponent rating.
+  *Checkpoint:* tests using hand-made Games.
+- [x] **Phase 5: CLI + report.** `chessstats USERNAME [--time-class] [--since YYYY-MM]
+  [--top N] [--min-games N] [--refresh] [--data-dir PATH]`.
+  *Checkpoint:* the full run on LegendaryBean123. ✔
+- [x] **Phase 6: Opening tree** (`tree.py`, `--tree`). One tree per colour built from the actual
+  moves in each PGN. A branch keeps splitting move by move until 90% of its games share one opening
+  family, then stops and shows that name. Branches with fewer than `--min-games` games (default 5
+  for the tree) are folded into "(other lines: N)"; runs where every game played the same move are
+  folded onto one line; mixed branches that can't go deeper show "mixed: mostly X (NN%)".
+  *Checkpoint:* `--tree` run on LegendaryBean123. ✔
+- [x] **Phase 7: HTML report** (`html_report.py`, `templates/report.html`, `--html PATH [--open]`).
+  One self-contained file that works offline. Python works out the stats and trees for "all" and each
+  speed, the board position at every tree branch (python-chess), and rating history (last rated game
+  per day), and embeds them as JSON. The page has: speed and colour filters, summary cards (record,
+  score, current ratings, best/worst opening with 10+ games), a rating-over-time chart (SVG, hover
+  tooltips, breaks at gaps over 45 days), win/draw/loss bars for the top 10 openings, a sortable
+  openings table, and an expandable opening tree next to a board that shows the selected position,
+  its stats and links to the 5 most recent games in that line. It follows the system's light/dark
+  mode and stacks into one column on phones. Tree branches need 3+ games by default.
+  *Checkpoint:* report generated for LegendaryBean123 and Hikaru; every tree row clicked under every
+  filter with no JavaScript errors; checked in light, dark and phone-width screenshots. ✔
+- [x] **Phase 8: Player search, loading screen, flat rating gaps** (`pipeline.py`, `server.py`, `--serve`).
+  `python -m chessstats --serve --open` runs a local website (127.0.0.1 only) with a search bar:
+  username + range (This year by default / Last 12 months / All time). The page calls
+  `/api/report?user=&range=` (the same pipeline and cache as the CLI) and polls `/api/progress` to show
+  a loading screen with "Downloading month N of M". One chess.com download runs at a time. Saved
+  `--html` files show the search bar too, and explain how to start the server. On the rating chart a
+  gap of 30+ days without rated games is drawn as a dashed flat line at the old rating (unchanged),
+  and the tooltip in a gap says "unchanged since <date>".
+
+## Running it
+```
+venv\Scripts\activate
+python -m chessstats LegendaryBean123
+python -m chessstats LegendaryBean123 --time-class blitz --since 2026-01 --top 5 --min-games 5
+python -m chessstats LegendaryBean123 --tree
+python -m chessstats LegendaryBean123 --tree --time-class rapid --min-games 10
+python -m chessstats LegendaryBean123 --html report.html --open
+python -m chessstats --serve --open                   # search any player in the browser
+python -m chessstats LegendaryBean123 --serve --open  # ...starting with this one
+python -m pytest
+```
+
+## Known limitations
+- Opening names are what chess.com assigns, so they describe the game, not the player's choice:
+  "Englund Gambit" in the White table means the player faced it as White.
+- Family grouping is rule-based; new odd names can be fixed in `FAMILY_ALIASES` / `NAME_FIXES` in `models.py`.
+- The tree branches on move order, so transpositions (the same position reached by different moves)
+  show up as separate branches. chess.com sometimes names a game after the transposed line, which is
+  why a branch stops at 90% agreement rather than 100% (`DOMINANT_SHARE` in `tree.py`).
+
+## Extensions (after v1)
+1. Export to CSV/JSON
+2. Best and worst openings (flag small samples)
+3. Rating-over-time chart (matplotlib)
+4. How the opening repertoire changes month to month
+5. `--detailed` variation view; merge transposed tree branches by position (python-chess)
+6. Where games are lost: move number, clock, termination
+7. SQLite storage
+8. Compare players / opponent prep
+9. Stockfish blunder analysis
+10. Put the `--serve` site online for other people (needs a real web server, and a job queue for long downloads)
+
+## API rules to follow
+- Always send a User-Agent (a request without one returns 403).
+- Make requests one at a time; back off on 429.
+- Cache aggressively; use ETags; request gzip.
+- Lowercase usernames; use `.get()` for optional fields; set `timeout=` on every request.

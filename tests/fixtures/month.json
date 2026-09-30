@@ -1,0 +1,221 @@
+{
+ "games": [
+  {
+   "url": "https://www.chess.com/game/live/53978943495",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2022.08.11\"]\n[Round \"-\"]\n[White \"LegendaryBean123\"]\n[Black \"gilbertaluga1\"]\n[Result \"1/2-1/2\"]\n[CurrentPosition \"r1b1kbnr/pppp1ppp/2n5/4p1q1/4P3/1QP5/PP1P1PPP/RNB1KB1R w KQkq -\"]\n[Timezone \"UTC\"]\n[ECO \"B00\"]\n[ECOUrl \"https://www.chess.com/openings/Nimzowitsch-Defense-Declined\"]\n[UTCDate \"2022.08.11\"]\n[UTCTime \"17:43:00\"]\n[WhiteElo \"684\"]\n[BlackElo \"574\"]\n[TimeControl \"600\"]\n[Termination \"Game drawn by agreement\"]\n[StartTime \"17:43:00\"]\n[EndDate \"2022.08.11\"]\n[EndTime \"17:44:29\"]\n[Link \"https://www.chess.com/game/live/53978943495\"]\n\n1. e4 *",
+   "time_control": "600",
+   "end_time": 1660239869,
+   "rated": true,
+   "uuid": "fc7baf49-199c-11ed-9af6-78ac4409ff3c",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "r1b1kbnr/pppp1ppp/2n5/4p1q1/4P3/1QP5/PP1P1PPP/RNB1KB1R w KQkq -",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 684,
+    "result": "agreed",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "black": {
+    "rating": 574,
+    "result": "agreed",
+    "@id": "https://api.chess.com/pub/player/gilbertaluga1",
+    "username": "gilbertaluga1",
+    "uuid": "28f0e02c-7aa9-11eb-af4f-b9949d072261"
+   },
+   "eco": "https://www.chess.com/openings/Nimzowitsch-Defense-Declined"
+  },
+  {
+   "url": "https://www.chess.com/game/live/100230811906",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2024.01.29\"]\n[Round \"-\"]\n[White \"huydzvlcc999\"]\n[Black \"LegendaryBean123\"]\n[Result \"1-0\"]\n[CurrentPosition \"8/4RQ2/5k1p/6p1/2P2p2/8/5PPP/5K2 b - -\"]\n[Timezone \"UTC\"]\n[ECO \"B01\"]\n[ECOUrl \"https://www.chess.com/openings/Scandinavian-Defense-Mieses-Kotrc-Main-Line\"]\n[UTCDate \"2024.01.29\"]\n[UTCTime \"04:50:16\"]\n[WhiteElo \"673\"]\n[BlackElo \"524\"]\n[TimeControl \"600\"]\n[Termination \"huydzvlcc999 won by checkmate\"]\n[StartTime \"04:50:16\"]\n[EndDate \"2024.01.29\"]\n[EndTime \"04:54:51\"]\n[Link \"https://www.chess.com/game/live/100230811906\"]\n\n1. e4 *",
+   "time_control": "600",
+   "end_time": 1706504091,
+   "rated": true,
+   "uuid": "ea18738d-be61-11ee-9b36-d101f101000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "8/4RQ2/5k1p/6p1/2P2p2/8/5PPP/5K2 b - -",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 673,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/huydzvlcc999",
+    "username": "huydzvlcc999",
+    "uuid": "90b13aee-aad1-11ee-83fd-410a0fd31ce1"
+   },
+   "black": {
+    "rating": 524,
+    "result": "checkmated",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "eco": "https://www.chess.com/openings/Scandinavian-Defense-Mieses-Kotrc-Main-Line"
+  },
+  {
+   "url": "https://www.chess.com/game/live/100230824698",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2024.01.29\"]\n[Round \"-\"]\n[White \"LegendaryBean123\"]\n[Black \"MiguelPerezGaspar\"]\n[Result \"0-1\"]\n[CurrentPosition \"8/n1p3kp/Bp4p1/p3p3/8/2P1R3/PP5P/1K1q4 w - -\"]\n[Timezone \"UTC\"]\n[ECO \"C30\"]\n[ECOUrl \"https://www.chess.com/openings/Kings-Gambit-Declined-Queens-Knight-Defense\"]\n[UTCDate \"2024.01.29\"]\n[UTCTime \"04:54:52\"]\n[WhiteElo \"411\"]\n[BlackElo \"513\"]\n[TimeControl \"600\"]\n[Termination \"MiguelPerezGaspar won by checkmate\"]\n[StartTime \"04:54:52\"]\n[EndDate \"2024.01.29\"]\n[EndTime \"05:01:30\"]\n[Link \"https://www.chess.com/game/live/100230824698\"]\n\n1. e4 *",
+   "time_control": "600",
+   "end_time": 1706504490,
+   "rated": true,
+   "uuid": "8b0e0c4c-be62-11ee-9b36-d101f101000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "8/n1p3kp/Bp4p1/p3p3/8/2P1R3/PP5P/1K1q4 w - -",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 411,
+    "result": "checkmated",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "black": {
+    "rating": 513,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/miguelperezgaspar",
+    "username": "MiguelPerezGaspar",
+    "uuid": "d6ce59e4-85e2-11ee-965a-bbe313a96062"
+   },
+   "eco": "https://www.chess.com/openings/Kings-Gambit-Declined-Queens-Knight-Defense"
+  },
+  {
+   "url": "https://www.chess.com/game/live/100230842972",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2024.01.29\"]\n[Round \"-\"]\n[White \"Rvp909\"]\n[Black \"LegendaryBean123\"]\n[Result \"0-1\"]\n[CurrentPosition \"8/6r1/4k2N/3p3P/8/2b1Pr2/7K/8 w - -\"]\n[Timezone \"UTC\"]\n[ECO \"A00\"]\n[ECOUrl \"https://www.chess.com/openings/Undefined\"]\n[UTCDate \"2024.01.29\"]\n[UTCTime \"05:01:26\"]\n[WhiteElo \"414\"]\n[BlackElo \"495\"]\n[TimeControl \"600\"]\n[Termination \"LegendaryBean123 won by resignation\"]\n[StartTime \"05:01:26\"]\n[EndDate \"2024.01.29\"]\n[EndTime \"05:09:32\"]\n[Link \"https://www.chess.com/game/live/100230842972\"]\n\n1. e4 *",
+   "time_control": "600",
+   "end_time": 1706504972,
+   "rated": true,
+   "uuid": "785c7957-be63-11ee-9b36-d101f101000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "8/6r1/4k2N/3p3P/8/2b1Pr2/7K/8 w - -",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 414,
+    "result": "resigned",
+    "@id": "https://api.chess.com/pub/player/rvp909",
+    "username": "Rvp909",
+    "uuid": "a5495540-a739-11ee-bc57-a7acdf902b98"
+   },
+   "black": {
+    "rating": 495,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "eco": "https://www.chess.com/openings/Undefined"
+  },
+  {
+   "url": "https://www.chess.com/game/live/100264913410",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2024.02.04\"]\n[Round \"-\"]\n[White \"LegendaryBean123\"]\n[Black \"DogSpider\"]\n[Result \"1-0\"]\n[CurrentPosition \"rnbk3r/ppp2ppp/3b4/1B6/3PQB2/8/PPP2PPP/RN2K2R b KQ -\"]\n[Timezone \"UTC\"]\n[ECO \"C42\"]\n[ECOUrl \"https://www.chess.com/openings/Petrovs-Defense-Classical-Variation\"]\n[UTCDate \"2024.02.04\"]\n[UTCTime \"00:01:04\"]\n[WhiteElo \"425\"]\n[BlackElo \"374\"]\n[TimeControl \"600\"]\n[Termination \"LegendaryBean123 won by resignation\"]\n[StartTime \"00:01:04\"]\n[EndDate \"2024.02.04\"]\n[EndTime \"00:03:49\"]\n[Link \"https://www.chess.com/game/live/100264913410\"]\n\n1. e4 *",
+   "time_control": "600",
+   "end_time": 1707005029,
+   "rated": true,
+   "uuid": "7d513eef-c2f0-11ee-8606-1622bd01000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "rnbk3r/ppp2ppp/3b4/1B6/3PQB2/8/PPP2PPP/RN2K2R b KQ -",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 425,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "black": {
+    "rating": 374,
+    "result": "resigned",
+    "@id": "https://api.chess.com/pub/player/dogspider",
+    "username": "DogSpider",
+    "uuid": "fa08ac0a-89a4-11ee-8c14-affae48c4489"
+   },
+   "eco": "https://www.chess.com/openings/Petrovs-Defense-Classical-Variation"
+  },
+  {
+   "url": "https://www.chess.com/game/live/100264966170",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2024.02.04\"]\n[Round \"-\"]\n[White \"Crispinzera\"]\n[Black \"LegendaryBean123\"]\n[Result \"0-1\"]\n[CurrentPosition \"6k1/p4pp1/7p/1p3K1P/7r/8/5n2/8 w - -\"]\n[Timezone \"UTC\"]\n[ECO \"D00\"]\n[ECOUrl \"https://www.chess.com/openings/Queens-Pawn-Opening-Blackmar-Blackmar-Diemer-Gambit-3...Nf6\"]\n[UTCDate \"2024.02.04\"]\n[UTCTime \"00:20:39\"]\n[WhiteElo \"408\"]\n[BlackElo \"466\"]\n[TimeControl \"600\"]\n[Termination \"LegendaryBean123 won by resignation\"]\n[StartTime \"00:20:39\"]\n[EndDate \"2024.02.04\"]\n[EndTime \"00:27:18\"]\n[Link \"https://www.chess.com/game/live/100264966170\"]\n\n1. e4 *",
+   "time_control": "600",
+   "end_time": 1707006438,
+   "rated": true,
+   "uuid": "3ef35592-c2f3-11ee-8606-1622bd01000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "6k1/p4pp1/7p/1p3K1P/7r/8/5n2/8 w - -",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 408,
+    "result": "resigned",
+    "@id": "https://api.chess.com/pub/player/crispinzera",
+    "username": "Crispinzera",
+    "uuid": "86937cca-5bec-11eb-9d15-b1777ffd0c07"
+   },
+   "black": {
+    "rating": 466,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "eco": "https://www.chess.com/openings/Queens-Pawn-Opening-Blackmar-Blackmar-Diemer-Gambit-3...Nf6"
+  },
+  {
+   "url": "https://www.chess.com/game/live/100767110076",
+   "pgn": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2024.02.05\"]\n[Round \"-\"]\n[White \"Wolfofthewest\"]\n[Black \"LegendaryBean123\"]\n[Result \"1-0\"]\n[CurrentPosition \"rnbqkbnr/pppp1ppp/8/4p3/8/4P1P1/PPPP1P1P/RNBQKBNR b KQkq -\"]\n[Timezone \"UTC\"]\n[ECO \"A00\"]\n[ECOUrl \"https://www.chess.com/openings/Van-t-Kruijs-Opening-1...e5\"]\n[UTCDate \"2024.02.05\"]\n[UTCTime \"20:22:09\"]\n[WhiteElo \"599\"]\n[BlackElo \"556\"]\n[TimeControl \"600\"]\n[Termination \"Wolfofthewest won - game abandoned\"]\n[StartTime \"20:22:09\"]\n[EndDate \"2024.02.05\"]\n[EndTime \"20:24:15\"]\n[Link \"https://www.chess.com/game/live/100767110076\"]\n\n1. e4 *",
+   "time_control": "600",
+   "end_time": 1707164655,
+   "rated": true,
+   "uuid": "35cf5dad-c464-11ee-a494-99050c01000f",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "rnbqkbnr/pppp1ppp/8/4p3/8/4P1P1/PPPP1P1P/RNBQKBNR b KQkq -",
+   "time_class": "rapid",
+   "rules": "chess",
+   "white": {
+    "rating": 599,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/wolfofthewest",
+    "username": "Wolfofthewest",
+    "uuid": "09263ae6-6b55-11e8-8006-000000000000"
+   },
+   "black": {
+    "rating": 556,
+    "result": "abandoned",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "eco": "https://www.chess.com/openings/Van-t-Kruijs-Opening-1...e5"
+  },
+  {
+   "url": "https://www.chess.com/game/live/110322135623",
+   "pgn": "[Event \"Live Chess - Three-Check\"]\n[Site \"Chess.com\"]\n[Date \"2024.05.24\"]\n[Round \"-\"]\n[White \"rochess123\"]\n[Black \"LegendaryBean123\"]\n[Result \"1-0\"]\n[Variant \"3-check\"]\n[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 +0+0\"]\n[Tournament \"https://www.chess.com/tournament/live/10-3-check-4798554\"]\n[CurrentPosition \"r1bq1bnr/pppp1k1p/2n3p1/4p3/4P3/5Q2/PPPP1PPP/RNB1K1NR b KQ -\"]\n[Timezone \"UTC\"]\n[ECO \"C23\"]\n[ECOUrl \"https://www.chess.com/openings/Bishops-Opening-2...Nc6\"]\n[UTCDate \"2024.05.24\"]\n[UTCTime \"20:40:01\"]\n[WhiteElo \"1634\"]\n[BlackElo \"790\"]\n[TimeControl \"60\"]\n[Termination \"rochess123 won by checking the opponent king for the 3rd time\"]\n[StartTime \"20:40:01\"]\n[EndDate \"2024.05.24\"]\n[EndTime \"20:40:16\"]\n[Link \"https://www.chess.com/game/live/110322135623\"]\n\n1. e4 *",
+   "time_control": "60",
+   "end_time": 1716583216,
+   "rated": true,
+   "uuid": "caf86c6c-1a0d-11ef-855f-6cfe544c0428",
+   "initial_setup": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "fen": "r1bq1bnr/pppp1k1p/2n3p1/4p3/4P3/5Q2/PPPP1PPP/RNB1K1NR b KQ -",
+   "time_class": "blitz",
+   "rules": "threecheck",
+   "white": {
+    "rating": 1634,
+    "result": "win",
+    "@id": "https://api.chess.com/pub/player/rochess123",
+    "username": "rochess123",
+    "uuid": "2963e216-ac2c-11e1-802a-000000000000"
+   },
+   "black": {
+    "rating": 790,
+    "result": "threecheck",
+    "@id": "https://api.chess.com/pub/player/legendarybean123",
+    "username": "LegendaryBean123",
+    "uuid": "d5585550-199c-11ed-8468-a13eba53cb90"
+   },
+   "eco": "https://www.chess.com/openings/Bishops-Opening-2...Nc6",
+   "tournament": "https://api.chess.com/pub/tournament/10-3-check-4798554"
+  }
+ ]
+}
