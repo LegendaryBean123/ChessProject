@@ -29,6 +29,7 @@ chessstats/
   models.py     # Layer 3: raw JSON -> Game objects from the player's point of view
   analysis.py   # Layer 4: pure functions, Games -> opening stats
   tree.py       # Layer 4: Games -> move tree that stops where the opening is decided
+  insights.py   # Layer 4: Games -> endings, clock, rating-gap, activity, time-of-day, streak stats
   report.py     # Layer 5: prints tables and trees
   html_report.py        # Layer 5: builds the HTML report's data (positions via python-chess)
   templates/report.html # the report page: layout, CSS and JavaScript, no external files
@@ -88,6 +89,69 @@ Each phase ends with something runnable. Finish the checkpoint before moving on.
   `--html` files show the search bar too, and explain how to start the server. On the rating chart a
   gap of 30+ days without rated games is drawn as a dashed flat line at the old rating (unchanged),
   and the tooltip in a gap says "unchanged since <date>".
+- [x] **Phase 9: How games end** (`models.py`, `insights.py`, `--stats`). *(Extension 6)*
+  - `Game` gets new fields, all parsed from data we already download:
+    - `end_reason`: checkmate / resignation / time / abandoned / draw type. For losses and draws it
+      comes from the player's result code; for wins it comes from the opponent's.
+    - `plies`: the game's length.
+    - `base_seconds` / `increment`: from `time_control`, e.g. "180+2". Daily games get none.
+    - `my_clock` / `opp_clock`: the last `[%clk]` time of each side.
+    - `material_diff`: my material minus the opponent's in the final `fen`
+      (P=1, N=B=3, R=5, Q=9).
+  - New module `insights.py` (Layer 4, pure functions: Games in, numbers out):
+    - `ending_stats`: wins and losses split by how they ended (checkmate, resignation, time,
+      abandoned), and draws split by type.
+    - `length_stats`: W/D/L by game length in moves (1–20, 21–30, 31–40, 41–60, 61+).
+    - `clock_stats`, for timed games only:
+      - Low on time: the player's last clock is under 10% of the starting time. Count these games and
+        the player's score in them.
+      - Average time left in wins vs losses.
+      - Lost on time while 3+ points of material ahead.
+      - Won on time while 3+ points behind.
+  - CLI: `--stats` prints these as text tables, like `--tree`.
+  - Help for users:
+    - `README.md`: install, a first run, one example per feature, where the cache lives.
+    - `--help` sorts flags under headings (What to show / Filters / Download and cache / Report and website) and
+      ends with example commands.
+    - Running with no arguments prints a short welcome with example commands instead of an error.
+    - After a normal run, one line suggests a feature that run didn't use, only when stdout is a terminal.
+  - *Checkpoint:* unit tests with hand-made Games and the fixture month; `--stats` on LegendaryBean123;
+    `--help` and the no-arguments message checked by eye. ✔ The fixture's PGNs are cut to one move, so
+    clock parsing is tested with hand-written PGNs and checked against real cached games.
+- [x] **Phase 10: More charts in the HTML report** (`insights.py`, `html_report.py`, `report.html`). *(like Extension 3)*
+  - New stats, each added to every speed view in the payload and printed by `--stats`:
+    - **Score vs opponent rating:** buckets by rating gap (≤−200, −199…−100, −99…−25, ±24, +25…+99,
+      +100…+199, ≥+200). Each bucket shows the player's actual score next to the Elo-expected score,
+      so you can tell whether they beat the rating odds.
+    - **Activity:** games per month as stacked W/D/L bars.
+    - **Time of day:** games and score per hour, in the computer's local time zone. Bar height is the
+      number of games; bar colour is the score.
+    - **Streaks and tilt:**
+      - Longest win and loss streaks, and the current streak.
+      - Score in the next game after a win vs after a loss, counting only a next game that ended
+        within an hour of the previous one (no daily games).
+    - chess.com stores ratings from *after* each game (in 1,534 of 1,575 rated games the rating moved
+      the way that game went), so the winner always looked stronger. `pregame_ratings` estimates the
+      ratings before the game: the player's from their previous rated game at the same speed, the
+      opponent's as their after-game rating plus what the player gained.
+  - Page layout, a "How your games go" section after the rating chart and before the openings table:
+    - New cards: "How you lose" (the most common ending) and "Low on time" (count and score).
+    - "How games end" (losses grow left, wins right) next to "Game length".
+    - "Clock" next to "Streaks & tilt".
+    - "Score vs rating gap" next to "Time of day".
+    - "Activity by month" across the full width, since all-time players can have 150+ months.
+    - Columns with fewer than 10 games are drawn faded.
+  - The new panels follow the speed filter and cover both colours; the colour filter still only
+    changes the openings and the tree.
+  - The footer shows the terminal command for the current view (player, speed, range) with a copy
+    button, and updates as the filters change.
+  - README: a section on the web report and what each chart means.
+  - The charts are hand-made SVG like the rating chart, with hover tooltips and light/dark mode. They
+    stack into one column on phones.
+  - *Checkpoint:* payload tests; report generated for LegendaryBean123 and Hikaru; no JavaScript errors
+    under any filter; screenshots in light, dark and phone width. ✔ Every speed × colour clicked and
+    every new chart hovered in Edge (Playwright) with no errors or sideways scrolling; the new data adds
+    about 85 KB to Hikaru's 18 MB report.
 
 ## Running it
 ```
@@ -96,6 +160,8 @@ python -m chessstats LegendaryBean123
 python -m chessstats LegendaryBean123 --time-class blitz --since 2026-01 --top 5 --min-games 5
 python -m chessstats LegendaryBean123 --tree
 python -m chessstats LegendaryBean123 --tree --time-class rapid --min-games 10
+python -m chessstats LegendaryBean123 --stats
+python -m chessstats LegendaryBean123 --stats --time-class blitz --since 2026-01
 python -m chessstats LegendaryBean123 --html report.html --open
 python -m chessstats --serve --open                   # search any player in the browser
 python -m chessstats LegendaryBean123 --serve --open  # ...starting with this one
@@ -109,14 +175,20 @@ python -m pytest
 - The tree branches on move order, so transpositions (the same position reached by different moves)
   show up as separate branches. chess.com sometimes names a game after the transposed line, which is
   why a branch stops at 90% agreement rather than 100% (`DOMINANT_SHARE` in `tree.py`).
+- Ratings before each game are estimates (chess.com only stores the rating after it), and a range's
+  first rated game at each speed has no earlier game to estimate from, so it is left out of the
+  rating-gap stats.
+- Time of day uses the time zone of the computer that builds the report and the time games *ended*.
+- "Ahead on material" counts pieces in the final position only; it can't see a mate threat or a
+  passed pawn. Engine analysis (Extension 9) would be needed for that.
 
 ## Extensions (after v1)
 1. Export to CSV/JSON
-2. Best and worst openings (flag small samples)
-3. Rating-over-time chart (matplotlib)
+2. ~~Best and worst openings~~ (done in the HTML cards, Phase 7)
+3. ~~Rating-over-time chart~~ (done as SVG, Phase 7; more charts in Phase 10)
 4. How the opening repertoire changes month to month
 5. `--detailed` variation view; merge transposed tree branches by position (python-chess)
-6. Where games are lost: move number, clock, termination
+6. ~~Where games are lost: move number, clock, termination~~ (Phase 9)
 7. SQLite storage
 8. Compare players / opponent prep
 9. Stockfish blunder analysis

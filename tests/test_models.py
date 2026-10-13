@@ -4,12 +4,15 @@ from pathlib import Path
 import pytest
 
 from chessstats.models import (
+    material_balance,
     normalize_result,
     opening_family,
     opening_name,
     opening_slug,
     parse_game,
     parse_games,
+    parse_time_control,
+    pgn_clocks,
     pgn_moves,
 )
 
@@ -144,3 +147,44 @@ def test_parsed_game_has_moves(raw_games):
 )
 def test_opening_slug_invalid(url):
     assert opening_slug(url) is None
+
+
+def test_end_reason_comes_from_the_losing_side(raw_games):
+    by_url = {g.url: g for g in parse_games(raw_games, USER)}
+    assert by_url["https://www.chess.com/game/live/100264913410"].end_reason == "resignation"  # a win
+    assert by_url["https://www.chess.com/game/live/100230811906"].end_reason == "checkmate"  # a loss
+    assert by_url["https://www.chess.com/game/live/53978943495"].end_reason == "agreement"
+    assert by_url["https://www.chess.com/game/live/100767110076"].end_reason == "abandoned"
+
+
+def test_parse_game_reads_clocks_and_material(raw_games):
+    raw = dict(raw_games[0])  # White is the player
+    raw["pgn"] = '[Event "Live Chess"]\n\n1. e4 {[%clk 0:02:58.1]} 1... e5 {[%clk 0:02:59]} 2. Nf3 {[%clk 0:02:51]} 1-0'
+    raw["time_control"] = "180+2"
+    raw["fen"] = "4k3/8/8/8/8/8/8/R3K3 b - -"
+    game = parse_game(raw, USER)
+    assert (game.base_seconds, game.increment) == (180, 2)
+    assert (game.my_clock, game.opp_clock) == (171, 179)
+    assert game.material_diff == 5
+    assert game.full_moves == 2
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [("180", (180, 0)), ("180+2", (180, 2)), ("1/86400", (None, 0)), ("", (None, 0))],
+)
+def test_parse_time_control(text, expected):
+    assert parse_time_control(text) == expected
+
+
+def test_pgn_clocks_takes_each_sides_last_time():
+    pgn = "1. e4 {[%clk 1:00:00]} 1... e5 {[%clk 0:59:58.5]} 2. Nf3 {[%clk 0:59:30]} 1-0"
+    assert pgn_clocks(pgn) == {"white": 3570, "black": 3598.5}
+    assert pgn_clocks("1. e4 *") == {"white": None, "black": None}
+
+
+def test_material_balance():
+    assert material_balance("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -") == 0
+    assert material_balance("4k3/8/8/8/8/8/8/Q3K3 w - -") == 9
+    assert material_balance("4k3/rr6/8/8/8/8/8/4K3 w - -") == -10
+    assert material_balance("") is None

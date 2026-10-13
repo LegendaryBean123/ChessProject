@@ -68,10 +68,11 @@
   .segmented button:focus-visible, .tree-row:focus-visible, th button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .panel { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 14px; margin-bottom: 14px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 14px; margin-bottom: 14px; }
   .card-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .card-value { font-size: 26px; font-weight: 650; margin: 4px 0 2px; letter-spacing: -0.01em; }
   .card-value.name { font-size: 17px; line-height: 1.3; }
+  .card-value .unit { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
   .ratings { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
   .rating-item b { font-size: 20px; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
@@ -81,7 +82,35 @@
   .w { background: var(--win); } .d { background: var(--draw); } .l { background: var(--loss); }
 
   .grid-2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; margin-bottom: 14px; }
-  @media (max-width: 900px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+  .grid-even { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .grid-2, .grid-even { grid-template-columns: minmax(0, 1fr); } }
+  .section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 28px 0 12px; }
+  .section-head h2 { font-size: 19px; margin: 0; }
+  .panel-note { margin: -6px 0 12px; }
+
+  /* how games end: losses grow left, wins grow right */
+  .butterfly { display: grid; grid-template-columns: 36px minmax(0, 1fr) 92px minmax(0, 1fr) 36px; gap: 7px 8px; align-items: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .butterfly .head { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .butterfly .num { color: var(--muted); font-size: 12px; }
+  .butterfly .left { display: flex; justify-content: flex-end; } .butterfly .right-num { text-align: left; }
+  .butterfly .name { text-align: center; }
+  .butterfly .bar { border-radius: 4px; }
+  .draws-line { margin-top: 14px; }
+  .facts { list-style: none; margin: 0; padding: 0; }
+  .facts li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .facts li:last-child { border-bottom: 0; }
+  .facts b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .split-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 62px; gap: 10px; align-items: center; font-size: 13px; margin-top: 8px; }
+  .split-row .wdl { margin: 0; height: 12px; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .legend-line { display: inline-block; width: 14px; height: 2px; background: var(--text); vertical-align: middle; margin-right: 5px; }
+  .chart-hl { fill: var(--surface-2); }
+
+  /* terminal command */
+  .cli { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; margin-bottom: 8px; }
+  .cli code { font-size: 12px; background: var(--surface); border: 1px solid var(--border); padding: 3px 8px; border-radius: 6px; color: var(--text); overflow-wrap: anywhere; }
+  .copy { font: inherit; font-size: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+  .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .chart-wrap { position: relative; }
   .chart-wrap svg { display: block; max-width: 100%; height: auto; }
@@ -256,6 +285,54 @@
     </div>
   </section>
 
+  <div class="section-head">
+    <h2>How your games go</h2>
+    <span class="muted small" id="insights-note"></span>
+  </div>
+  <section class="grid-even">
+    <div class="panel">
+      <h2>How games end</h2>
+      <div id="endings"></div>
+    </div>
+    <div class="panel">
+      <h2>Game length</h2>
+      <p class="muted small panel-note">Results by number of moves; the bar length is the number of games.</p>
+      <div class="bars" id="lengths"></div>
+      <div class="bar-legend">
+        <span><span class="dot w"></span>Win</span><span><span class="dot d"></span>Draw</span><span><span class="dot l"></span>Loss</span>
+      </div>
+    </div>
+  </section>
+  <section class="grid-even">
+    <div class="panel">
+      <h2>Clock</h2>
+      <div id="clock"></div>
+    </div>
+    <div class="panel">
+      <h2>Streaks &amp; tilt</h2>
+      <div id="streaks"></div>
+    </div>
+  </section>
+  <section class="grid-even">
+    <div class="panel">
+      <h2>Score vs rating gap</h2>
+      <p class="muted small panel-note">Your score against opponents rated above or below you, next to what the ratings predict.</p>
+      <div class="chart-wrap" id="gap-chart"></div>
+    </div>
+    <div class="panel">
+      <h2>Time of day</h2>
+      <p class="muted small panel-note" id="hours-note"></p>
+      <div class="chart-wrap" id="hours-chart"></div>
+    </div>
+  </section>
+  <section class="panel" style="margin-bottom:28px">
+    <h2>Activity by month</h2>
+    <div class="chart-wrap" id="months-chart"></div>
+    <div class="bar-legend">
+      <span><span class="dot w"></span>Win</span><span><span class="dot d"></span>Draw</span><span><span class="dot l"></span>Loss</span>
+    </div>
+  </section>
+
   <section class="panel" style="margin-bottom:14px">
     <h2 id="table-title">Openings</h2>
     <div class="table-wrap" id="openings-table"></div>
@@ -270,7 +347,10 @@
     <aside class="panel board-panel" id="board-panel"></aside>
   </section>
 
-  <footer class="muted small" id="footer"></footer>
+  <footer class="muted small">
+    <div class="cli" id="cli"></div>
+    <div id="footer"></div>
+  </footer>
   </main>
 </div>
 
@@ -367,6 +447,7 @@ function renderFilters() {
 // ---------- summary cards ----------
 function renderCards() {
   const v = view();
+  const clock = v.insights.clock, low = clock.lowTime;
   const cards = document.getElementById("cards");
   const card = (label, ...body) => el("div", { class: "panel" }, el("div", { class: "card-label" }, label), ...body);
 
@@ -392,7 +473,7 @@ function renderCards() {
 
   cards.replaceChildren(
     card("Record",
-      el("div", { class: "card-value" }, `${fmt(v.games)} games`),
+      el("div", { class: "card-value" }, fmt(v.games), el("span", { class: "unit" }, " games")),
       wdlBar(v.wins, v.draws, v.losses),
       el("div", { class: "muted small" }, `${fmt(v.wins)} W · ${fmt(v.draws)} D · ${fmt(v.losses)} L`)),
     card("Score",
@@ -402,6 +483,16 @@ function renderCards() {
       : el("div", { class: "muted small", style: "margin-top:8px" }, "No rated games")),
     openingCard("Best opening", v.best),
     openingCard("Worst opening", v.worst),
+    card("How you lose", v.losses
+      ? [el("div", { class: "card-value name" }, cap(v.insights.endings.losses[0][0])),
+         el("div", { class: "muted small" }, `${pct((100 * v.insights.endings.losses[0][1]) / v.losses)} of ${fmt(v.losses)} losses`)]
+      : el("div", { class: "muted small", style: "margin-top:8px" }, "No losses")),
+    card("Low on time", clock.games
+      ? [el("div", { class: "card-value" }, fmt(low.games), el("span", { class: "unit" }, " games")),
+         el("div", { class: "muted small" }, low.games
+           ? `${pct(low.scorePct)} score · under ${DATA.lowTimePct}% of the clock left`
+           : `Never under ${DATA.lowTimePct}% of the clock`)]
+      : el("div", { class: "muted small", style: "margin-top:8px" }, "No timed games")),
   );
 }
 
@@ -706,14 +797,299 @@ function renderBoardPanel(node) {
       : []));
 }
 
+// ---------- how games go ----------
+const insights = () => view().insights;
+const speedName = () => (state.tc === "all" ? "all speeds" : state.tc);
+const pctOrDash = (n) => (n === null || n === undefined ? "–" : pct(n));
+const scorePill = (n) => n === null
+  ? el("span", { class: "muted small" }, "–")
+  : el("span", { class: "pill", style: `background:${scoreColor(n)}` }, pct(n));
+
+function renderEndings() {
+  const { wins, losses, draws } = insights().endings;
+  const box = document.getElementById("endings");
+  if (!wins.length && !losses.length) { box.replaceChildren(el("div", { class: "empty" }, "No decisive games")); return; }
+  const won = Object.fromEntries(wins), lost = Object.fromEntries(losses);
+  const names = ["checkmate", "resignation", "time", "abandoned"];
+  for (const [name] of [...wins, ...losses]) if (!names.includes(name)) names.push(name);
+  const max = Math.max(...names.map((n) => Math.max(won[n] || 0, lost[n] || 0)));
+  const bar = (n, cls, title) => el("div", { class: `bar ${cls}`, style: `width:${n ? Math.max(2, (100 * n) / max) : 0}%`, title });
+  const rows = names.flatMap((name) => [
+    el("span", { class: "num", style: "text-align:right" }, fmt(lost[name] || 0)),
+    el("div", { class: "left" }, bar(lost[name], "l", `Lost by ${name}: ${lost[name] || 0}`)),
+    el("span", { class: "name" }, cap(name)),
+    el("div", {}, bar(won[name], "w", `Won by ${name}: ${won[name] || 0}`)),
+    el("span", { class: "num right-num" }, fmt(won[name] || 0)),
+  ]);
+  box.replaceChildren(
+    el("div", { class: "butterfly" },
+      el("span", { class: "head", style: "grid-column:1 / 3; text-align:right" }, "Lost by"),
+      el("span"),
+      el("span", { class: "head", style: "grid-column:4 / 6" }, "Won by"),
+      ...rows),
+    el("div", { class: "muted small draws-line" }, draws.length
+      ? `Draws: ${draws.map(([name, n]) => `${fmt(n)} ${name}`).join(" · ")}`
+      : "No draws"));
+}
+
+function renderLengths() {
+  const rows = insights().lengths;
+  const box = document.getElementById("lengths");
+  const max = Math.max(...rows.map((r) => r.games));
+  if (!max) { box.replaceChildren(el("div", { class: "empty" }, "No games with moves")); return; }
+  box.replaceChildren(...rows.map((r) => el("div", { class: "bar-row" },
+    el("div", { class: "bar-name" }, `${r.label} moves`),
+    el("div", { class: "bar-track" },
+      r.games
+        ? el("div", { class: "bar", style: `width:${Math.max(4, (60 * r.games) / max)}%`,
+            title: `${r.label} moves: ${r.wins} W / ${r.draws} D / ${r.losses} L` },
+            el("span", { class: "w", style: `width:${(100 * r.wins) / r.games}%` }),
+            el("span", { class: "d", style: `width:${(100 * r.draws) / r.games}%` }),
+            el("span", { class: "l", style: `width:${(100 * r.losses) / r.games}%` }))
+        : null,
+      el("span", { class: "muted small", style: "white-space:nowrap" },
+        r.games ? `${fmt(r.games)} · ${pct(r.scorePct)}` : "0")))));
+}
+
+function renderClock() {
+  const c = insights().clock;
+  const box = document.getElementById("clock");
+  if (!c.games) { box.replaceChildren(el("div", { class: "empty" }, "No timed games with clock times (daily games have none)")); return; }
+  const low = c.lowTime;
+  box.replaceChildren(
+    el("p", { class: "muted small panel-note" }, `${fmt(c.games)} timed games. Clock left is the share of the starting time.`),
+    el("div", { class: "stat-grid", style: "margin-top:0" },
+      el("div", {}, el("b", {}, pctOrDash(c.avgLeftWin)), el("span", { class: "muted small" }, "clock left in wins")),
+      el("div", {}, el("b", {}, pctOrDash(c.avgLeftLoss)), el("span", { class: "muted small" }, "clock left in losses")),
+      el("div", {}, el("b", {}, fmt(low.games)), el("span", { class: "muted small" }, `games under ${DATA.lowTimePct}% left`))),
+    el("ul", { class: "facts" },
+      el("li", {}, el("span", {}, `Score when under ${DATA.lowTimePct}% of the clock`),
+        low.games ? el("b", {}, `${low.wins} W / ${low.draws} D / ${low.losses} L · ${pct(low.scorePct)}`) : el("b", {}, "–")),
+      el("li", {}, el("span", {}, "Lost on time"),
+        el("b", {}, `${fmt(c.lostOnTime)} games · ${fmt(c.lostOnTimeAhead)} while ${DATA.aheadMaterial}+ pawns ahead`)),
+      el("li", {}, el("span", {}, "Won on time"),
+        el("b", {}, `${fmt(c.wonOnTime)} games · ${fmt(c.wonOnTimeBehind)} while ${DATA.aheadMaterial}+ pawns behind`))));
+}
+
+function renderStreaks() {
+  const s = insights().streaks;
+  const box = document.getElementById("streaks");
+  if (!s.current) { box.replaceChildren(el("div", { class: "empty" }, "No games")); return; }
+  const [kind, length] = s.current;
+  const plural = { win: "wins", loss: "losses", draw: "draws" };
+  const split = (label, r) => el("div", { class: "split-row" },
+    el("span", {}, label),
+    r.games ? wdlBar(r.wins, r.draws, r.losses) : el("span", { class: "muted small" }, "no games"),
+    el("span", { style: "text-align:right" }, r.games ? scorePill(r.scorePct) : null));
+  const { afterWin: w, afterLoss: l } = s;
+  let summary = "Not enough back-to-back games to compare.";
+  if (w.games && l.games) {
+    const diff = l.scorePct - w.scorePct;
+    summary = Math.abs(diff) < 1
+      ? "You score about the same after a win and after a loss."
+      : `You score ${Math.abs(diff).toFixed(1)} points ${diff < 0 ? "lower" : "higher"} after a loss than after a win.`;
+  }
+  box.replaceChildren(
+    el("div", { class: "stat-grid", style: "margin-top:0" },
+      el("div", {}, el("b", { style: "color:var(--win)" }, s.longestWin), el("span", { class: "muted small" }, "longest winning streak")),
+      el("div", {}, el("b", { style: "color:var(--loss)" }, s.longestLoss), el("span", { class: "muted small" }, "longest losing streak")),
+      el("div", {}, el("b", { style: `color:${RESULT_COLOR[kind]}` }, `${length} ${length === 1 ? kind : plural[kind]}`),
+        el("span", { class: "muted small" }, "current streak"))),
+    el("div", { class: "card-label", style: "margin-top:4px" }, "Next game, if played within an hour"),
+    split(`After a win (${fmt(w.games)})`, w),
+    split(`After a loss (${fmt(l.games)})`, l),
+    el("p", { class: "muted small", style: "margin:12px 0 0" }, summary));
+}
+
+// A bar chart with one column per item. `segments(item)` gives the stacked parts of a column
+// as [{ value, color, opacity }]; `marker(item)` an optional value drawn as a short line.
+function columnChart(wrap, { items, yMax, yStep, yFormat, height = 220, xLabel, segments, marker, tip, ariaLabel }) {
+  const width = Math.max(260, wrap.clientWidth);
+  const m = { l: 40, r: 6, t: 10, b: 24 };
+  const plotW = width - m.l - m.r, plotH = height - m.t - m.b;
+  const slot = plotW / items.length;
+  const barW = Math.max(1, Math.min(44, slot * 0.72));
+  const y = (v) => height - m.b - (Math.min(v, yMax) / yMax) * plotH;
+  const chart = svg("svg", { width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": ariaLabel });
+  for (let v = 0; v <= yMax + 1e-9; v += yStep) {
+    chart.append(svg("line", { class: "gridline", x1: m.l, x2: width - m.r, y1: y(v), y2: y(v) }));
+    const label = svg("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end" });
+    label.textContent = yFormat(v);
+    chart.append(label);
+  }
+  const highlight = svg("rect", { class: "chart-hl", y: m.t, width: slot, height: plotH, visibility: "hidden" });
+  chart.append(highlight);
+  items.forEach((item, i) => {
+    const cx = m.l + slot * (i + 0.5);
+    let base = 0;
+    for (const s of segments(item)) {
+      if (!s.value) continue;
+      chart.append(svg("rect", {
+        x: cx - barW / 2, y: y(base + s.value), width: barW, height: Math.max(0, y(base) - y(base + s.value)),
+        fill: s.color, "fill-opacity": s.opacity ?? 1,
+      }));
+      base += s.value;
+    }
+    const mark = marker ? marker(item) : null;
+    if (mark !== null && mark !== undefined) {
+      chart.append(svg("line", { x1: cx - barW / 2 - 3, x2: cx + barW / 2 + 3, y1: y(mark), y2: y(mark), stroke: "var(--text)", "stroke-width": 2 }));
+    }
+    const label = xLabel(item, i, slot);
+    if (label) {
+      const text = svg("text", { x: cx, y: height - 6, "text-anchor": "middle" });
+      text.textContent = label;
+      chart.append(text);
+    }
+  });
+  const tipBox = el("div", { class: "tooltip", hidden: true });
+  const overlay = svg("rect", { x: m.l, y: m.t, width: plotW, height: plotH, fill: "transparent" });
+  overlay.addEventListener("pointermove", (event) => {
+    const box = chart.getBoundingClientRect();
+    const i = Math.min(items.length - 1, Math.max(0, Math.floor((event.clientX - box.left - m.l) / slot)));
+    highlight.setAttribute("x", m.l + slot * i);
+    highlight.setAttribute("visibility", "visible");
+    tipBox.replaceChildren(...tip(items[i]));
+    tipBox.hidden = false;
+    const cx = m.l + slot * (i + 0.5);
+    tipBox.style.left = `${cx + 12 + tipBox.offsetWidth > width ? Math.max(0, cx - 12 - tipBox.offsetWidth) : cx + 12}px`;
+    tipBox.style.top = `${m.t}px`;
+  });
+  overlay.addEventListener("pointerleave", () => { tipBox.hidden = true; highlight.setAttribute("visibility", "hidden"); });
+  chart.append(overlay);
+  wrap.replaceChildren(chart, tipBox);
+}
+function countAxis(max) {
+  const step = niceStep(Math.max(max, 4), 4);
+  return { yMax: Math.ceil(max / step) * step || step, yStep: step, yFormat: (v) => fmt(v) };
+}
+const MIN_RELIABLE = 10; // columns with fewer games are drawn faded
+
+function renderGapChart() {
+  const items = insights().ratingGaps;
+  const wrap = document.getElementById("gap-chart");
+  if (!items.some((r) => r.games)) { wrap.replaceChildren(el("div", { class: "empty" }, "No games with ratings")); return; }
+  const short = (label) => label.replace(" or less", "↓").replace(" or more", "↑").replace(" to ", "…").replace(/-/g, "−");
+  const describe = (r, i) => {
+    if (r.label.startsWith("±")) return `Opponents within ${r.label.slice(1)} points of you`;
+    const [a, b] = r.label.match(/\d+/g).map(Number).sort((x, y) => x - y);
+    const range = b ? `${a} to ${b}` : `${a}+`;
+    return `Opponents rated ${range} points ${i < 3 ? "lower" : "higher"}`;
+  };
+  columnChart(wrap, {
+    items: items.map((r, i) => ({ ...r, i })),
+    yMax: 100, yStep: 25, yFormat: (v) => `${v}%`,
+    ariaLabel: "Score by opponent rating gap",
+    xLabel: (r, i, slot) => (slot >= 62 || i % 2 === 0 || r.label.startsWith("±") ? short(r.label) : ""),
+    segments: (r) => [{ value: r.scorePct ?? 0, color: "var(--accent)", opacity: r.games >= MIN_RELIABLE ? 1 : 0.35 }],
+    marker: (r) => r.expectedPct,
+    tip: (r) => [
+      el("div", {}, el("b", {}, describe(r, r.i))),
+      el("div", {}, r.games ? `${fmt(r.games)} games · ${r.wins} W / ${r.draws} D / ${r.losses} L` : "No games"),
+      r.games ? el("div", {}, `Your score ${pct(r.scorePct)} · expected ${pct(r.expectedPct)}`) : null,
+    ],
+  });
+  wrap.append(el("div", { class: "chart-legend" },
+    el("span", {}, el("span", { class: "dot", style: "background:var(--accent)" }), "your score"),
+    el("span", {}, el("span", { class: "legend-line" }), "expected from the ratings"),
+    el("span", {}, `faded: fewer than ${MIN_RELIABLE} games`)));
+}
+
+function renderHoursChart() {
+  const items = insights().hours;
+  const wrap = document.getElementById("hours-chart");
+  document.getElementById("hours-note").textContent =
+    `When games ended (${DATA.timeZone}, the time zone of the computer that made this report). Bar colour is your score: red is low, green is high. Daily games are left out.`;
+  const max = Math.max(...items.map((r) => r.games));
+  if (!max) { wrap.replaceChildren(el("div", { class: "empty" }, "No live (non-daily) games")); return; }
+  const hourName = (h) => new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: "numeric" });
+  columnChart(wrap, {
+    items: items.map((r) => ({ ...r, hour: Number(r.label) })),
+    ...countAxis(max),
+    ariaLabel: "Games and score by hour of the day",
+    xLabel: (r, i, slot) => (r.hour % (slot < 16 ? 6 : 3) === 0 ? hourName(r.hour) : ""),
+    segments: (r) => [{ value: r.games, color: scoreColor(r.scorePct ?? 50), opacity: r.games >= MIN_RELIABLE ? 1 : 0.45 }],
+    tip: (r) => [
+      el("div", {}, el("b", {}, `${hourName(r.hour)} – ${hourName((r.hour + 1) % 24)}`)),
+      el("div", {}, r.games ? `${fmt(r.games)} games · ${r.wins} W / ${r.draws} D / ${r.losses} L` : "No games"),
+      r.games ? el("div", {}, `Score ${pct(r.scorePct)}`) : null,
+    ],
+  });
+}
+
+function renderMonthsChart() {
+  const items = insights().months;
+  const wrap = document.getElementById("months-chart");
+  if (!items.length) { wrap.replaceChildren(el("div", { class: "empty" }, "No games")); return; }
+  const monthDate = (label) => new Date(label + "-01T00:00:00Z");
+  const monthName = (label, opts) => monthDate(label).toLocaleDateString(undefined, { ...opts, timeZone: "UTC" });
+  columnChart(wrap, {
+    items,
+    ...countAxis(Math.max(...items.map((r) => r.games))),
+    height: 200,
+    ariaLabel: "Games per month",
+    xLabel: (r, i, slot) => {
+      if (slot >= 34) return monthName(r.label, { month: "short" }) + (i === 0 || r.label.endsWith("-01") ? ` ${r.label.slice(2, 4)}` : "");
+      return r.label.endsWith("-01") && slot * 12 >= 30 ? r.label.slice(0, 4) : "";
+    },
+    segments: (r) => [
+      { value: r.wins, color: "var(--win)" },
+      { value: r.draws, color: "var(--draw)" },
+      { value: r.losses, color: "var(--loss)" },
+    ],
+    tip: (r) => [
+      el("div", {}, el("b", {}, monthName(r.label, { month: "long", year: "numeric" }))),
+      el("div", {}, r.games ? `${fmt(r.games)} games · ${r.wins} W / ${r.draws} D / ${r.losses} L` : "No games"),
+      r.games ? el("div", {}, `Score ${pct(r.scorePct)}`) : null,
+    ],
+  });
+}
+
+function renderInsights() {
+  document.getElementById("insights-note").textContent = `Both colours · ${speedName()}`;
+  renderEndings();
+  renderLengths();
+  renderClock();
+  renderStreaks();
+  renderInsightCharts();
+}
+function renderInsightCharts() {
+  renderGapChart();
+  renderHoursChart();
+  renderMonthsChart();
+}
+
+// ---------- terminal command ----------
+function renderCommand() {
+  const parts = ["python -m chessstats", DATA.player];
+  if (state.tc !== "all") parts.push("--time-class", state.tc);
+  if (DATA.since) parts.push("--since", DATA.since);
+  parts.push("--stats");
+  const command = parts.join(" ");
+  const code = el("code", {}, command);
+  const button = el("button", { type: "button", class: "copy", onclick: async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      button.textContent = "Copied";
+    } catch {
+      // No clipboard access (e.g. some browsers on file:// pages): select the text to copy by hand.
+      getSelection().selectAllChildren(code);
+      button.textContent = "Press Ctrl+C";
+    }
+    setTimeout(() => { button.textContent = "Copy"; }, 2000);
+  } }, "Copy");
+  document.getElementById("cli").replaceChildren(el("span", {}, "These stats in a terminal:"), code, button);
+}
+
 // ---------- wiring ----------
 function renderAll() {
   renderFilters();
   renderCards();
   renderRatingChart();
   renderOpeningBars();
+  renderInsights();
   renderTable();
   renderTree();
+  renderCommand();
 }
 function showReport() {
   document.getElementById("report").hidden = !DATA;
@@ -826,7 +1202,7 @@ if (CONFIG.server) {
 let resizeTimer;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => DATA && renderRatingChart(), 150);
+  resizeTimer = setTimeout(() => { if (DATA) { renderRatingChart(); renderInsightCharts(); } }, 150);
 });
 </script>
 </body>

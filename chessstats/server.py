@@ -45,15 +45,16 @@ class ReportServer(ThreadingHTTPServer):
         key = username.lower()
         self._set_progress(key, {"done": 0, "total": 0})
         try:
+            since = range_start(range_key, self.today())
             with self.download_lock:
                 player = load_games(
                     self.client,
                     username,
                     self.data_dir,
-                    since=range_start(range_key, self.today()),
+                    since=since,
                     on_progress=lambda done, total: self._set_progress(key, {"done": done, "total": total}),
                 )
-            return build_payload(player.display_name, player.games, self.min_games, RANGE_LABELS[range_key])
+            return build_payload(player.display_name, player.games, self.min_games, RANGE_LABELS[range_key], since)
         finally:
             with self.progress_lock:
                 self.progress.pop(key, None)

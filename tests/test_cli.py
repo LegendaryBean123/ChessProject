@@ -127,3 +127,43 @@ def test_serve_starts_the_server(tmp_path, monkeypatch, capsys):
     out, _ = capsys.readouterr()
     assert started == {"address": ("127.0.0.1", 8123), "data_dir": tmp_path, "min_games": 3, "closed": True}
     assert "http://127.0.0.1:8123/?user=LegendaryBean123" in out
+
+
+def test_stats_flag(tmp_path, capsys):
+    cli.main(["LegendaryBean123", "--stats", "--data-dir", str(tmp_path)])
+    out, _ = capsys.readouterr()
+    for title in ["How games end", "Game length", "Clock (", "Score vs opponent rating", "Streaks", "Time of day", "Activity"]:
+        assert title in out
+    assert "Most played openings" not in out
+
+
+def test_stats_and_tree_cannot_be_combined(tmp_path):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["x", "--stats", "--tree", "--data-dir", str(tmp_path)])
+    assert exc.value.code == 2
+
+
+def test_no_arguments_prints_a_welcome(capsys):
+    cli.main([])
+    out, _ = capsys.readouterr()
+    assert "Type a chess.com username" in out
+    assert "python -m chessstats LegendaryBean123 --stats" in out
+
+
+def test_help_lists_groups_and_examples(capsys):
+    with pytest.raises(SystemExit):
+        cli.main(["--help"])
+    out, _ = capsys.readouterr()
+    for heading in ["what to show", "filters:", "download and cache:", "examples:"]:
+        assert heading in out
+
+
+def test_tip_only_in_a_terminal(tmp_path, capsys, monkeypatch):
+    cli.main(["LegendaryBean123", "--data-dir", str(tmp_path)])
+    assert "Tip:" not in capsys.readouterr().out  # captured output is not a terminal
+
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    cli.main(["LegendaryBean123", "--data-dir", str(tmp_path)])
+    assert "Tip: add --stats" in capsys.readouterr().out
+    cli.main(["LegendaryBean123", "--stats", "--data-dir", str(tmp_path)])
+    assert "Tip: add --tree" in capsys.readouterr().out

@@ -1,7 +1,11 @@
 from chessstats.analysis import OpeningStats
+from chessstats.insights import AHEAD_MATERIAL, LOW_TIME_SHARE, WIN_LOSS_ENDINGS, Insights, Record
 from chessstats.tree import TreeNode
 
 OPENING_WIDTH = 32
+
+# --stats shows this many of the most recent months of activity.
+ACTIVITY_MONTHS = 12
 
 
 def render_openings(by_color: dict[str, list[OpeningStats]], top: int) -> str:
@@ -109,6 +113,116 @@ def _split_children(node: TreeNode, min_games: int) -> tuple[list[TreeNode], lis
     visible = [c for c in node.children if c.games >= min_games]
     hidden = [c for c in node.children if c.games < min_games]
     return visible, hidden
+
+
+def render_stats(insights: Insights) -> str:
+    """Every section of --stats as text."""
+    sections = [
+        _render_endings(insights),
+        _render_records("Game length", "Moves", insights.lengths),
+        _render_clock(insights),
+        _render_rating_gaps(insights),
+        _render_streaks(insights),
+        _render_records(
+            "Time of day (when games ended, this computer's time zone; daily games left out)",
+            "Hours",
+            [_hour_range(r, insights.hours) for r in insights.hours],
+        ),
+        _render_records(
+            f"Activity (last {ACTIVITY_MONTHS} months)" if len(insights.months) > ACTIVITY_MONTHS else "Activity",
+            "Month",
+            insights.months[-ACTIVITY_MONTHS:],
+        ),
+    ]
+    return "\n\n".join(sections)
+
+
+def _render_endings(insights: Insights) -> str:
+    endings = insights.endings
+    wins, losses = dict(endings.wins), dict(endings.losses)
+    names = [*WIN_LOSS_ENDINGS, *sorted((wins.keys() | losses.keys()) - set(WIN_LOSS_ENDINGS))]
+    lines = ["How games end", f"  {'':<14} {'Wins':>6} {'Losses':>7}"]
+    for name in names:
+        lines.append(f"  {name.capitalize():<14} {wins.get(name, 0):>6} {losses.get(name, 0):>7}")
+    if endings.draws:
+        lines.append("  Draws: " + ", ".join(f"{count} {name}" for name, count in endings.draws))
+    return "\n".join(lines)
+
+
+def _render_clock(insights: Insights) -> str:
+    clock = insights.clock
+    title = f"Clock ({clock.games:,} timed games)"
+    if not clock.games:
+        return f"{title}\n  (no timed games with clock times)"
+    low = clock.low_time
+    return "\n".join(
+        [
+            title,
+            "  Clock left at the end, as a share of the starting time: "
+            f"{_pct(clock.avg_left_win_pct, 0)} in wins, {_pct(clock.avg_left_loss_pct, 0)} in losses",
+            f"  Low on time (under {LOW_TIME_SHARE:.0%} left): {low.games} games, "
+            f"{low.wins}/{low.draws}/{low.losses}, score {_pct(low.score_pct)}",
+            f"  Lost on time: {clock.lost_on_time} games, "
+            f"{clock.lost_on_time_ahead} while {AHEAD_MATERIAL}+ points of material ahead",
+            f"  Won on time: {clock.won_on_time} games, "
+            f"{clock.won_on_time_behind} while {AHEAD_MATERIAL}+ points of material behind",
+        ]
+    )
+
+
+def _render_rating_gaps(insights: Insights) -> str:
+    lines = [
+        "Score vs opponent rating (ratings before each game, estimated)",
+        f"  {'Opponent':<14} {'Games':>5}   {'W / D / L':<13} {'Score%':>7} {'Expected':>9}",
+    ]
+    for bucket in insights.rating_gaps:
+        r = bucket.record
+        lines.append(
+            f"  {r.label:<14} {r.games:>5}   {_wdl(r):<13} {_pct(r.score_pct):>7} {_pct(bucket.expected_pct):>9}"
+        )
+    return "\n".join(lines)
+
+
+def _render_streaks(insights: Insights) -> str:
+    streaks = insights.streaks
+    current = "none"
+    if streaks.current:
+        result, length = streaks.current
+        current = f"{length} {result}{'' if length == 1 else 'es' if result == 'loss' else 's'}"
+    after = [
+        f"{r.label.lower()} {_wdl(r)} ({_pct(r.score_pct)})" for r in (streaks.after_win, streaks.after_loss)
+    ]
+    return "\n".join(
+        [
+            "Streaks",
+            f"  Longest winning streak: {streaks.longest_win}   Longest losing streak: {streaks.longest_loss}"
+            f"   Current: {current}",
+            f"  Next game within an hour: {after[0]}, {after[1]}",
+        ]
+    )
+
+
+def _render_records(title: str, label: str, records: list[Record]) -> str:
+    lines = [title, f"  {label:<14} {'Games':>5}   {'W / D / L':<13} {'Win%':>6} {'Score%':>7}"]
+    for r in records:
+        win_pct = 100 * r.wins / r.games if r.games else None
+        lines.append(f"  {r.label:<14} {r.games:>5}   {_wdl(r):<13} {_pct(win_pct):>6} {_pct(r.score_pct):>7}")
+    return "\n".join(lines)
+
+
+def _hour_range(r: Record, hours: list[Record]) -> Record:
+    """Relabel an hour bucket "9" as "09:00-11:59" (for 3-hour buckets)."""
+    start = int(r.label)
+    end = start + 24 // len(hours) - 1
+    return Record(f"{start:02d}:00-{end:02d}:59", r.wins, r.draws, r.losses)
+
+
+def _wdl(r: Record) -> str:
+    return f"{r.wins}/{r.draws}/{r.losses}"
+
+
+def _pct(value: float | None, digits: int = 1) -> str:
+    return "-" if value is None else f"{value:.{digits}f}%"
 
 
 def _truncate(text: str) -> str:

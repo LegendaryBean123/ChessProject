@@ -1,13 +1,14 @@
 """Build the data for the HTML report and write it into the page template."""
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from importlib.resources import files
 from pathlib import Path
 
 import chess
 
 from chessstats.analysis import COLORS, OpeningStats, filter_games, opening_stats
+from chessstats.insights import AHEAD_MATERIAL, LOW_TIME_SHARE, Insights, Record, summarize
 from chessstats.models import Game
 from chessstats.pipeline import DEFAULT_RANGE, RANGE_LABELS
 from chessstats.report import format_moves
@@ -21,16 +22,27 @@ CONFIG_PLACEHOLDER = "__CHESSSTATS_CONFIG__"
 BEST_WORST_MIN_GAMES = 10
 
 
-def build_payload(username: str, games: list[Game], min_games: int, range_label: str | None = None) -> dict:
+def build_payload(
+    username: str,
+    games: list[Game],
+    min_games: int,
+    range_label: str | None = None,
+    since: tuple[int, int] | None = None,
+) -> dict:
     """Everything the page shows, for "all" games and for each speed played.
 
-    `range_label` describes which months were included, e.g. "This year".
+    `range_label` describes which months were included, e.g. "This year", and `since`
+    is the first of them as (year, month), or None for every month.
     """
     time_classes = sorted({g.time_class for g in games}, key=_time_class_order)
     dates = [g.end_time for g in games]
     return {
         "player": username,
         "rangeLabel": range_label,
+        "since": f"{since[0]}-{since[1]:02d}" if since else None,
+        "timeZone": _utc_offset(),
+        "lowTimePct": round(100 * LOW_TIME_SHARE),
+        "aheadMaterial": AHEAD_MATERIAL,
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "totalGames": len(games),
         "firstDate": min(dates).date().isoformat() if dates else None,
@@ -72,6 +84,7 @@ def _view(games: list[Game], min_games: int) -> dict:
         "draws": results.count("draw"),
         "losses": results.count("loss"),
         **_best_and_worst(stats),
+        "insights": _insights(summarize(games)),
     }
     for color in COLORS:
         color_games = [g for g in games if g.color == color]
@@ -91,6 +104,61 @@ def _best_and_worst(stats: dict[str, list[OpeningStats]]) -> dict:
         return {"best": None, "worst": None}
     ranked = sorted(candidates, key=lambda s: (s.score_pct, s.games))
     return {"best": _stats_row(ranked[-1]), "worst": _stats_row(ranked[0])}
+
+
+def _insights(insights: Insights) -> dict:
+    clock, streaks = insights.clock, insights.streaks
+    return {
+        "endings": {
+            "wins": [list(pair) for pair in insights.endings.wins],
+            "losses": [list(pair) for pair in insights.endings.losses],
+            "draws": [list(pair) for pair in insights.endings.draws],
+        },
+        "lengths": [_record(r) for r in insights.lengths],
+        "clock": {
+            "games": clock.games,
+            "lowTime": _record(clock.low_time),
+            "avgLeftWin": _round(clock.avg_left_win_pct),
+            "avgLeftLoss": _round(clock.avg_left_loss_pct),
+            "lostOnTime": clock.lost_on_time,
+            "lostOnTimeAhead": clock.lost_on_time_ahead,
+            "wonOnTime": clock.won_on_time,
+            "wonOnTimeBehind": clock.won_on_time_behind,
+        },
+        "ratingGaps": [{**_record(b.record), "expectedPct": _round(b.expected_pct)} for b in insights.rating_gaps],
+        "months": [_record(r) for r in insights.months],
+        "hours": [_record(r) for r in insights.hours],
+        "streaks": {
+            "longestWin": streaks.longest_win,
+            "longestLoss": streaks.longest_loss,
+            "current": list(streaks.current) if streaks.current else None,
+            "afterWin": _record(streaks.after_win),
+            "afterLoss": _record(streaks.after_loss),
+        },
+    }
+
+
+def _record(r: Record) -> dict:
+    return {
+        "label": r.label,
+        "games": r.games,
+        "wins": r.wins,
+        "draws": r.draws,
+        "losses": r.losses,
+        "scorePct": _round(r.score_pct),
+    }
+
+
+def _round(value: float | None) -> float | None:
+    return None if value is None else round(value, 1)
+
+
+def _utc_offset() -> str:
+    """This computer's offset from UTC, e.g. 'UTC-04:00'; time-of-day stats use this time zone."""
+    offset = datetime.now().astimezone().utcoffset() or timedelta()
+    minutes = int(offset.total_seconds() // 60)
+    sign = "+" if minutes >= 0 else "-"
+    return f"UTC{sign}{abs(minutes) // 60:02d}:{abs(minutes) % 60:02d}"
 
 
 def _stats_row(s: OpeningStats) -> dict:

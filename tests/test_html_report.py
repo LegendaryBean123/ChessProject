@@ -129,6 +129,28 @@ def test_payload_records_range_label(games):
     assert build_payload("Tester", games, min_games=1, range_label="This year")["rangeLabel"] == "This year"
 
 
+def test_payload_records_since_and_settings(games):
+    payload = build_payload("Tester", games, min_games=1, since=(2026, 1))
+    assert payload["since"] == "2026-01"
+    assert build_payload("Tester", games, min_games=1)["since"] is None
+    assert re.fullmatch(r"UTC[+-]\d\d:\d\d", payload["timeZone"])
+    assert (payload["lowTimePct"], payload["aheadMaterial"]) == (10, 3)
+
+
+def test_each_view_has_insights(games):
+    views = build_payload("Tester", games, min_games=1)["views"]
+    everything = views["all"]["insights"]
+    assert everything["endings"] == {"wins": [["other", 3]], "losses": [["other", 2]], "draws": [["other", 1]]}
+    assert [r["label"] for r in everything["lengths"]] == ["1-20", "21-30", "31-40", "41-60", "61+"]
+    assert everything["lengths"][0] == {"label": "1-20", "games": 6, "wins": 3, "draws": 1, "losses": 2, "scorePct": 58.3}
+    assert len(everything["hours"]) == 24
+    assert [r["label"] for r in everything["months"]] == ["2026-01"]
+    assert everything["streaks"]["current"] == ["draw", 1]
+    assert everything["clock"]["games"] == 0  # the test games have no clock times
+    assert len(everything["ratingGaps"]) == 7
+    assert views["rapid"]["insights"]["months"][0]["games"] == 1
+
+
 def test_page_without_a_player_for_the_server():
     html = render_page(None, server=True)
     assert json.loads(embedded_json(html, "data")) is None

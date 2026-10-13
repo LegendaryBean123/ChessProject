@@ -85,10 +85,12 @@ def test_range_defaults_to_this_year(server, client):
     server.today = lambda: date(2025, 3, 1)  # May 2024 is now last year
     payload = json.loads(get(server, "/api/report?user=legendarybean123")[2])
     assert payload["rangeLabel"] == "This year"
+    assert payload["since"] == "2025-01"  # the page shows this in the terminal command
     assert payload["totalGames"] == 0
 
     payload = json.loads(get(server, "/api/report?user=legendarybean123&range=all")[2])
     assert payload["totalGames"] == 7
+    assert payload["since"] is None
 
 
 def test_unknown_player(server):

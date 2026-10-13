@@ -13,6 +13,24 @@ DRAW_RESULTS = {
     "timevsinsufficient",
 }
 
+# How a game ended, from chess.com's result codes. For a win the code comes from
+# the loser's side ("checkmated", "timeout", ...); anything unlisted is "other".
+END_REASONS = {
+    "checkmated": "checkmate",
+    "resigned": "resignation",
+    "timeout": "time",
+    "abandoned": "abandoned",
+    "agreed": "agreement",
+    "repetition": "repetition",
+    "stalemate": "stalemate",
+    "insufficient": "insufficient material",
+    "50move": "50-move rule",
+    "timevsinsufficient": "time vs insufficient material",
+}
+
+# Piece values for counting material in the final position.
+PIECE_VALUES = {"p": 1, "n": 3, "b": 3, "r": 5, "q": 9}
+
 # Words that end an opening's family name, e.g. "Sicilian Defense" in
 # "Sicilian-Defense-Alapin-Variation".
 FAMILY_END_WORDS = {
@@ -59,6 +77,9 @@ PGN_COMMENT = re.compile(r"\{[^}]*\}")
 PGN_MOVE_NUMBER = re.compile(r"^\d+\.(\.\.)?$")
 PGN_RESULTS = {"1-0", "0-1", "1/2-1/2", "*"}
 
+# A move followed by its clock: "12. Nf3 {[%clk 0:02:31.4]}" (white) or "12... Nf6 {...}" (black).
+PGN_CLOCK = re.compile(r"\d+\.(\.\.)? \S+ \{\[%clk (\d+):(\d+):(\d+(?:\.\d+)?)\]\}")
+
 
 @dataclass(frozen=True)
 class Game:
@@ -76,6 +97,17 @@ class Game:
     pgn: str
     moves: tuple[str, ...] = ()
     opponent: str = ""
+    end_reason: str = "other"
+    base_seconds: int | None = None  # starting clock; None for daily games
+    increment: int = 0
+    my_clock: float | None = None  # seconds left after the player's last move
+    opp_clock: float | None = None
+    material_diff: int | None = None  # player's material minus the opponent's at the end
+
+    @property
+    def full_moves(self) -> int:
+        """Game length in moves, e.g. 1.e4 e5 2.Nf3 is 2 moves."""
+        return (len(self.moves) + 1) // 2
 
 
 def parse_games(raw_games: list[dict], username: str) -> list[Game]:
@@ -99,13 +131,17 @@ def parse_game(raw: dict, username: str) -> Game | None:
 
     slug = opening_slug(raw.get("eco"))
     pgn = raw.get("pgn", "")
+    result = normalize_result(me["result"])
+    base_seconds, increment = parse_time_control(raw.get("time_control", ""))
+    clocks = pgn_clocks(pgn)
+    material = material_balance(raw.get("fen", ""))
     return Game(
         url=raw["url"],
         end_time=datetime.fromtimestamp(raw["end_time"], tz=timezone.utc),
         time_class=raw["time_class"],
         rated=raw.get("rated", False),
         color=color,
-        result=normalize_result(me["result"]),
+        result=result,
         my_rating=me.get("rating", 0),
         opp_rating=opp.get("rating", 0),
         opening=opening_name(slug),
@@ -114,6 +150,12 @@ def parse_game(raw: dict, username: str) -> Game | None:
         pgn=pgn,
         moves=pgn_moves(pgn),
         opponent=opp.get("username", ""),
+        end_reason=END_REASONS.get(opp["result"] if result == "win" else me["result"], "other"),
+        base_seconds=base_seconds,
+        increment=increment,
+        my_clock=clocks[color],
+        opp_clock=clocks["black" if color == "white" else "white"],
+        material_diff=None if material is None else material if color == "white" else -material,
     )
 
 
@@ -123,6 +165,34 @@ def normalize_result(result: str) -> str:
     if result in DRAW_RESULTS:
         return "draw"
     return "loss"
+
+
+def parse_time_control(text: str) -> tuple[int | None, int]:
+    """'180+2' -> (180, 2) and '600' -> (600, 0); daily games like '1/86400' -> (None, 0)."""
+    match = re.fullmatch(r"(\d+)(?:\+(\d+))?", text)
+    if not match:
+        return None, 0
+    return int(match.group(1)), int(match.group(2) or 0)
+
+
+def pgn_clocks(pgn: str) -> dict[str, float | None]:
+    """Seconds left on each side's clock after their last move; None if a side has no clock times."""
+    clocks: dict[str, float | None] = {"white": None, "black": None}
+    for match in PGN_CLOCK.finditer(pgn):
+        black, hours, minutes, seconds = match.groups()
+        clocks["black" if black else "white"] = int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    return clocks
+
+
+def material_balance(fen: str) -> int | None:
+    """White's material minus Black's in a FEN position (P=1, N=B=3, R=5, Q=9)."""
+    if not fen:
+        return None
+    balance = 0
+    for char in fen.split()[0]:
+        value = PIECE_VALUES.get(char.lower(), 0)
+        balance += value if char.isupper() else -value
+    return balance
 
 
 def opening_slug(eco_url: str | None) -> str | None:
