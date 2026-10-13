@@ -120,7 +120,7 @@ def test_write_report_embeds_safe_json(tmp_path, games):
     data = embedded_json(html, "data")
     assert json.loads(data)["player"] == "Tester"
     assert "<" not in data  # nothing in the data can close the script tag
-    assert html.count("</script>") == 3  # the config and data tags plus the page script
+    assert html.count("</script>") == 4  # the theme script, the config and data tags, and the page script
     assert json.loads(embedded_json(html, "config"))["server"] is False
 
 

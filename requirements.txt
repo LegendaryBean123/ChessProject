@@ -1,3 +1,4 @@
 requests>=2.31
 chess>=1.10
 pytest>=8.0
+pywebview>=6  # only for --app

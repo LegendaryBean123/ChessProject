@@ -35,6 +35,7 @@ Not sure what to type? Run `python -m chessstats` on its own for a few examples,
 | `python -m chessstats NAME --tree` | The openings move by move, until each line settles into a named opening |
 | `python -m chessstats NAME --html report.html --open` | An interactive report with charts and a chessboard, saved as one file |
 | `python -m chessstats --serve --open` | A local website where you can look up any player |
+| `python -m chessstats --app` | The same website in its own desktop window |
 
 Filters work with every view:
 
@@ -77,7 +78,47 @@ python -m chessstats NAME --stats --time-class blitz --since 2026-01
 The speed buttons filter the whole page. The White/Black buttons change only the opening sections.
 The footer shows the terminal command that prints the same stats, with a copy button.
 
-Charts take their colours from your system's light or dark mode, and the page works on phones.
+The page works on phones.
+
+### Themes
+
+The report has two looks, switched with the buttons at the top right or the `theme` command:
+
+- **Terminal** (the default): monospace text, a dark background and boxed panels.
+- **Classic:** rounded cards that follow your system's light or dark mode.
+
+Your browser remembers the choice.
+
+### Command bar
+
+The `>` prompt at the top of the page lets you drive the report from the keyboard. Press `/` from
+anywhere to jump to it.
+
+| Type | What happens |
+|---|---|
+| `hikaru` or `user hikaru all` | Look up a player (optionally with a range: `year`, `12months`, `all`) |
+| `blitz`, `rapid`, `all`, ... | Filter by speed |
+| `white` / `black` | Choose the colour for the openings and the tree |
+| `tree`, `stats`, `rating`, `openings` | Jump to that section |
+| `range 12months` | Reload the current player with another range |
+| `theme classic` | Change the look |
+| `help` / `clear` | List every command / clear the output |
+
+Tab completes words, and ↑/↓ bring back earlier commands. Looking up players needs `--serve` or
+`--app`; in a saved `--html` file, the filters and sections still work.
+
+## The desktop app
+
+```
+python -m chessstats --app                    # opens a window with the player search
+python -m chessstats --app LegendaryBean123   # ...starting with this player
+```
+
+It's the same report as `--serve`, in its own window with no browser tabs or address bar. Links to
+chess.com games open in your normal browser. Closing the window stops the app.
+
+`--app` needs the `pywebview` package (included in `requirements.txt`). On Windows it uses Microsoft
+WebView2, which comes with Windows 11.
 
 ## Where games are stored
 

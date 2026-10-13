@@ -35,6 +35,7 @@ chessstats/
   templates/report.html # the report page: layout, CSS and JavaScript, no external files
   pipeline.py   # download + parse one player's games; shared by the CLI and the server
   server.py     # --serve: local website with a player search (JSON API over the pipeline)
+  app.py        # --app: the same website in its own desktop window (pywebview)
   __main__.py   # glue: argparse + pipeline
 tests/
 data/           # cache (git-ignored)
@@ -152,6 +153,66 @@ Each phase ends with something runnable. Finish the checkpoint before moving on.
     under any filter; screenshots in light, dark and phone width. ✔ Every speed × colour clicked and
     every new chart hovered in Edge (Playwright) with no errors or sideways scrolling; the new data adds
     about 85 KB to Hikaru's 18 MB report.
+- [x] **Phase 11: Terminal look and a command bar** (`report.html` only; no Python changes).
+  - **Terminal theme**, the new default:
+    - Monospace font (Cascadia Mono / Consolas / Menlo; no downloads, so saved files still work offline).
+    - Near-black background, light grey text, phosphor-green accents and headings. Win/draw/loss keep
+      green/grey/red.
+    - Panels drawn as boxes with the title set into the top border, like `┌─ How games end ───┐`.
+    - The loading screen becomes terminal output, e.g. `Downloading month 3 of 31  [######......]`.
+  - **Classic theme:** today's look stays available.
+    - Switch with a `[terminal|classic]` toggle or the `theme` command. The choice is remembered in the
+      browser.
+    - Only classic follows the system's light/dark mode; the terminal theme is always dark.
+    - Both themes share the same colour variables, so the charts work unchanged.
+  - **Room for more themes:** a theme is a palette (`data-theme`) plus a family (`data-family`) that
+    sets the structure: terminal boxes or classic cards. Adding one later means one block of colour
+    variables and one line in the `THEMES` list, e.g. an amber terminal.
+  - **Command bar** at the top of the page, a `>` prompt with a blinking cursor. `/` focuses it from
+    anywhere.
+    - Commands are plain words; a reply or error shows on the line below the prompt:
+      - `NAME` or `user NAME [year|12months|all]`: look up a player. This needs `--serve`/`--app`; a
+        saved file explains that, as the search box does now.
+      - `blitz` / `speed blitz` / `speed all`: speed filter.
+      - `white` / `black`: colour filter.
+      - `go stats|rating|openings|tree`: scroll to that section.
+      - `range year|12months|all`: reload the current player with another range.
+      - `theme terminal|classic`, `help` (lists every command), `clear`.
+    - ↑/↓ cycle through earlier commands; Tab completes command words, speeds and colours.
+    - The filter buttons and the search box still work; the bar is an extra way in, not a replacement.
+  - *Checkpoint:* both themes in Edge (Playwright) at desktop and phone width; every command typed in a
+    saved report and in `--serve`; no JavaScript errors; existing payload tests still pass. ✔ 29
+    scripted checks (commands, errors, history, Tab, `/`, theme memory, lookups on the server).
+    A bare unknown word is treated as a username; `foo bar` (not a range) is an unknown command.
+- [x] **Phase 12: Desktop app** (`app.py`, `--app`).
+  - `python -m chessstats --app [NAME]` opens the site in its own window ("chessstats"), with no
+    browser tabs or address bar:
+    - The report server starts on a free port on 127.0.0.1 in a background thread.
+    - pywebview opens a 1280×900 window on it, loading NAME if given.
+    - Closing the window stops the server.
+  - pywebview uses Microsoft's WebView2 on Windows, which is already installed on Windows 11.
+  - Add `pywebview>=6` to requirements.txt, but import it only inside `--app`. Without it, `--app` exits
+    with "run pip install pywebview" and everything else still works.
+  - Links to chess.com games open in the normal browser, not inside the app window.
+  - The Copy button already falls back to selecting the text if the window blocks clipboard access.
+  - README: an "App" section; `--help` and the welcome message list `--app`.
+  - *Checkpoint:*
+    - Unit test with a fake pywebview: the server starts on a free port, the window gets the right URL,
+      and the server stops when the window closes.
+    - Manual run: search, loading screen, the command bar, a game link opening in the browser, and
+      closing the window ends the process.
+  - ✔ pywebview 6.2.1 installs on Python 3.14. The real window was driven via WebView2's debugging
+    port (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333`): it loaded a player,
+    ran commands, looked up Hikaru, and the Copy button worked. Closing the window exited with code 0.
+    Game links weren't clicked in the test (that opens the real browser); pywebview's
+    `OPEN_EXTERNAL_LINKS_IN_BROWSER` (on by default) handles them.
+- [ ] **Phase 13: Revise the command bar's commands.** Details to be decided with the user after
+  trying Phase 11's first version.
+
+## Set aside for later
+- Review Phases 9–10 (committed in 32f8402; Phases 11–12 are built on top of them).
+- A double-clickable `.exe` (PyInstaller) for people without Python.
+- More themes (Phase 11 makes them one CSS block + one list entry each).
 
 ## Running it
 ```
@@ -164,6 +225,7 @@ python -m chessstats LegendaryBean123 --stats
 python -m chessstats LegendaryBean123 --stats --time-class blitz --since 2026-01
 python -m chessstats LegendaryBean123 --html report.html --open
 python -m chessstats --serve --open                   # search any player in the browser
+python -m chessstats --app                            # the same, in a desktop window
 python -m chessstats LegendaryBean123 --serve --open  # ...starting with this one
 python -m pytest
 ```

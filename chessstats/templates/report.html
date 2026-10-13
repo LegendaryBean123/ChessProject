@@ -4,7 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chess opening report</title>
+<script>
+  // Themes: `family` sets the structure (terminal boxes or classic cards) and the theme id sets the
+  // colours. To add one, add a `:root[data-theme="id"]` block of colour variables below and a line here.
+  const THEMES = {
+    terminal: { label: "Terminal", family: "terminal" },
+    classic: { label: "Classic", family: "classic" },
+  };
+  const DEFAULT_THEME = "terminal";
+  const THEME_KEY = "chessstats-theme";
+  function applyTheme(id) {
+    document.documentElement.dataset.theme = id;
+    document.documentElement.dataset.family = THEMES[id].family;
+  }
+  // Set before the page is drawn, so it never flashes the wrong theme.
+  let savedTheme = null;
+  try { savedTheme = localStorage.getItem(THEME_KEY); } catch { /* storage blocked: use the default */ }
+  applyTheme(THEMES[savedTheme] ? savedTheme : DEFAULT_THEME);
+</script>
 <style>
+  /* ---------- colours: classic (light, and dark below) ---------- */
   :root {
     --bg: #f6f6f3;
     --surface: #ffffff;
@@ -27,7 +46,7 @@
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root[data-theme="classic"] {
       --bg: #131315;
       --surface: #1c1c1f;
       --surface-2: #26262a;
@@ -42,6 +61,29 @@
       --shadow: none;
       color-scheme: dark;
     }
+  }
+  /* ---------- colours: terminal (always dark) ---------- */
+  :root[data-theme="terminal"] {
+    --bg: #0a0d0b;
+    --surface: #0a0d0b;
+    --surface-2: #151c17;
+    --text: #d3dbd5;
+    --muted: #7d8b82;
+    --border: #2c3d32;
+    --accent: #5ccfe6;
+    --heading: #4ade80;
+    --win: #3fcf76;
+    --draw: #7f8a83;
+    --loss: #f2655d;
+    --bullet: #f0a742;
+    --blitz: #5ccfe6;
+    --rapid: #c792ea;
+    --daily: #2ec4b6;
+    --sq-light: #c3cdb9;
+    --sq-dark: #6b8a6b;
+    --sq-highlight: rgba(246, 206, 72, 0.55);
+    --shadow: none;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -233,6 +275,56 @@
   @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   @media (max-width: 600px) { .panel { padding: 14px; } h1 { font-size: 23px; } .search input { max-width: none; } }
+
+  /* ---------- command bar (every theme) ---------- */
+  .cmd { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 10px; margin: -8px 0 22px; padding: 10px 14px; }
+  .cmd .prompt { font-weight: 700; color: var(--heading, var(--accent)); }
+  .cmd input { font: inherit; color: var(--text); background: transparent; border: 0; outline: 0; padding: 4px 0; min-width: 0; caret-color: var(--heading, var(--accent)); }
+  .cmd input::placeholder { color: var(--muted); }
+  .cmd:focus-within { border-color: var(--heading, var(--accent)); }
+  .cmd-output { grid-column: 1 / -1; margin: 0; white-space: pre-wrap; font: inherit; font-size: 12px; color: var(--muted); }
+  .cmd-output:empty { display: none; }
+  .cmd-output .error { color: var(--loss); }
+  .cmd-output .echo { color: var(--text); }
+  .loading-text { margin: 14px 0 0; font: inherit; font-size: 13px; white-space: pre; display: none; }
+
+  /* ---------- structure: terminal family ---------- */
+  [data-family="terminal"] body {
+    font: 13px/1.55 "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
+  }
+  [data-family="terminal"] h1 { color: var(--heading); font-size: 24px; letter-spacing: 0; }
+  [data-family="terminal"] h1::before { content: "$ "; color: var(--muted); }
+  [data-family="terminal"] .panel { border-radius: 0; box-shadow: none; }
+  /* A panel's title sits in its top border: ┤ Title ├ */
+  [data-family="terminal"] .panel:has(> h2:first-child) { position: relative; padding-top: 24px; margin-top: 8px; }
+  [data-family="terminal"] .panel > h2:first-child {
+    position: absolute; top: -0.8em; left: 12px; margin: 0; padding: 0 2px;
+    background: var(--bg); color: var(--heading); font-size: 13px; font-weight: 700;
+  }
+  [data-family="terminal"] .panel > h2:first-child::before { content: "┤ "; color: var(--border); }
+  [data-family="terminal"] .panel > h2:first-child::after { content: " ├"; color: var(--border); }
+  [data-family="terminal"] .section-head h2 { color: var(--heading); font-size: 15px; }
+  [data-family="terminal"] .section-head h2::before { content: "## "; color: var(--muted); }
+  [data-family="terminal"] .card-label { color: var(--heading); letter-spacing: 0.02em; }
+  [data-family="terminal"] .card-value { letter-spacing: 0; font-size: 22px; }
+  [data-family="terminal"] .card-value.name { font-size: 15px; }
+  [data-family="terminal"] .segmented { border-radius: 0; border: 1px solid var(--border); background: transparent; padding: 2px; }
+  [data-family="terminal"] .segmented button { border-radius: 0; text-transform: lowercase; }
+  [data-family="terminal"] .segmented button[aria-pressed="true"] { background: var(--heading); color: var(--bg); box-shadow: none; }
+  [data-family="terminal"] .wdl, [data-family="terminal"] .bar, [data-family="terminal"] .score-bar,
+  [data-family="terminal"] .score-bar span, [data-family="terminal"] .table-wrap, [data-family="terminal"] .stat-grid div,
+  [data-family="terminal"] .tree-row, [data-family="terminal"] .board, [data-family="terminal"] .result,
+  [data-family="terminal"] .games-list a, [data-family="terminal"] .tooltip, [data-family="terminal"] .notice,
+  [data-family="terminal"] .notice code, [data-family="terminal"] .cli code, [data-family="terminal"] .copy { border-radius: 0; }
+  [data-family="terminal"] .pill { border-radius: 2px; color: var(--bg); }
+  [data-family="terminal"] .search input, [data-family="terminal"] .search select, [data-family="terminal"] .btn { border-radius: 0; }
+  [data-family="terminal"] .btn { background: var(--heading); color: var(--bg); }
+  [data-family="terminal"] .opening-tag.named { color: var(--heading); }
+  [data-family="terminal"] .tree .tree { border-left-style: dashed; }
+  [data-family="terminal"] .loader, [data-family="terminal"] .progress, [data-family="terminal"] #loading-status { display: none; }
+  [data-family="terminal"] .loading-text { display: block; color: var(--heading); }
+  [data-family="terminal"] .loading-card { text-align: left; }
+  [data-family="terminal"] .welcome h1::before { content: ""; }
 </style>
 </head>
 <body>
@@ -247,13 +339,20 @@
       <select id="search-range" name="range"></select>
       <button class="btn" type="submit">Look up</button>
     </form>
+    <div class="segmented" id="theme-filter" role="group" aria-label="Theme"></div>
+  </div>
+  <div class="panel cmd" id="cmd">
+    <label class="prompt" for="cmd-input">&gt;</label>
+    <input id="cmd-input" autocomplete="off" spellcheck="false" autocapitalize="off"
+           placeholder="type a command — try help">
+    <pre class="cmd-output" id="cmd-output" aria-live="polite"></pre>
   </div>
   <div id="notice" class="notice" hidden></div>
 
   <section class="welcome" id="welcome" hidden>
     <div class="big" aria-hidden="true">♚&#xFE0E;</div>
     <h1>Look up a chess.com player</h1>
-    <p class="muted">Enter a username above to see their openings, ratings and opening tree.</p>
+    <p class="muted">Enter a username above, or type it at the <b>&gt;</b> prompt, to see their openings, ratings and stats.</p>
   </section>
 
   <main id="report">
@@ -361,6 +460,7 @@
     <div class="muted small" id="loading-range"></div>
     <div class="progress indeterminate" id="loading-progress"><span></span></div>
     <div class="muted small" id="loading-status">Contacting chess.com…</div>
+    <pre class="loading-text" id="loading-text"></pre>
   </div>
 </div>
 
@@ -1171,6 +1271,7 @@ function showLoading(user, rangeLabel) {
   document.getElementById("loading-progress").className = "progress indeterminate";
   document.getElementById("loading-progress").firstElementChild.style.width = "";
   document.getElementById("loading-status").textContent = "Contacting chess.com…";
+  document.getElementById("loading-text").textContent = "$ chessstats " + user + "\nContacting chess.com…";
   loadingEl.hidden = false;
 }
 function updateLoading(progress) {
@@ -1178,15 +1279,201 @@ function updateLoading(progress) {
   const bar = document.getElementById("loading-progress");
   bar.className = "progress";
   bar.firstElementChild.style.width = `${(100 * progress.done) / progress.total}%`;
-  document.getElementById("loading-status").textContent = progress.done < progress.total
+  const status = progress.done < progress.total
     ? `Downloading month ${progress.done + 1} of ${progress.total}…`
     : "Analysing games…";
+  document.getElementById("loading-status").textContent = status;
+  // The terminal theme shows the progress as text: [########............]
+  const filled = Math.round((20 * progress.done) / progress.total);
+  const title = document.getElementById("loading-title").textContent.replace(/^Loading /, "");
+  document.getElementById("loading-text").textContent =
+    `$ chessstats ${title}\n${status}\n[${"#".repeat(filled)}${".".repeat(20 - filled)}] ${progress.done}/${progress.total}`;
 }
 function hideLoading() {
   loadingEl.hidden = true;
 }
 
+// ---------- themes ----------
+function renderThemeToggle() {
+  const current = document.documentElement.dataset.theme;
+  document.getElementById("theme-filter").replaceChildren(...Object.entries(THEMES).map(([id, theme]) =>
+    el("button", { type: "button", "aria-pressed": String(id === current), onclick: () => setTheme(id) }, theme.label)));
+}
+function setTheme(id) {
+  applyTheme(id);
+  try { localStorage.setItem(THEME_KEY, id); } catch { /* not remembered, but still applied */ }
+  renderThemeToggle();
+  if (DATA) { renderRatingChart(); renderInsightCharts(); } // fonts change, so charts re-measure
+}
+
+// ---------- command bar ----------
+const cmdInput = document.getElementById("cmd-input");
+const cmdOutput = document.getElementById("cmd-output");
+const SPEEDS = ["all", "bullet", "blitz", "rapid", "daily"];
+const COLORS = ["white", "black"];
+const SECTIONS = { stats: ".section-head", rating: "#rating-chart", openings: "#openings-table", tree: "#tree" };
+const COMMANDS = {
+  user: { args: "NAME [year|12months|all]", about: "look up a player (or just type their name)", run: commandUser },
+  speed: { args: SPEEDS.join("|"), about: "filter by speed (or just type blitz, rapid, …)", run: commandSpeed },
+  color: { args: COLORS.join("|"), about: "colour for the openings and tree (or just type white/black)", run: commandColor },
+  go: { args: Object.keys(SECTIONS).join("|"), about: "jump to a section (or just type its name)", run: commandGo },
+  range: { args: Object.keys(CONFIG.ranges).join("|"), about: "reload this player with another range of games", run: commandRange },
+  theme: { args: Object.keys(THEMES).join("|"), about: "change the look", run: commandTheme },
+  help: { args: "", about: "show this list", run: commandHelp },
+  clear: { args: "", about: "clear this output", run: () => ({ text: "" }) },
+};
+const cmdHistory = [];
+let historyIndex = 0;
+
+class CommandError extends Error {}
+const usage = (name) => new CommandError(`Usage: ${name} ${COMMANDS[name].args}`);
+const SERVER_ONLY = "Looking up players needs the chessstats server. In a terminal, run: python -m chessstats --serve --open";
+function needPlayer() {
+  if (!DATA) throw new CommandError("Load a player first: type their chess.com username.");
+}
+
+function runCommand(line) {
+  const words = line.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  let name = words[0].toLowerCase(), args = words.slice(1);
+  if (name === "colour") name = "color";
+  // Shortcuts: a bare speed, colour or section name.
+  if (SPEEDS.includes(name)) [name, args] = ["speed", [name]];
+  else if (COLORS.includes(name)) [name, args] = ["color", [name]];
+  else if (SECTIONS[name]) [name, args] = ["go", [name]];
+  else if (!COMMANDS[name]) {
+    // Anything else is a username, optionally followed by a range ("hikaru all").
+    if (words.length > 2 || (words[1] && !CONFIG.ranges[words[1].toLowerCase()])) {
+      return { text: `Unknown command "${words[0]}". Type help for the list.`, error: true };
+    }
+    [name, args] = ["user", words];
+  }
+  try {
+    return COMMANDS[name].run(args);
+  } catch (error) {
+    if (error instanceof CommandError) return { text: error.message, error: true };
+    throw error;
+  }
+}
+
+function commandUser([user, range]) {
+  if (!user) throw usage("user");
+  if (!/^[A-Za-z0-9_-]{1,50}$/.test(user)) throw new CommandError(`Unknown command "${user}". Type help for the list.`);
+  if (range && !CONFIG.ranges[range.toLowerCase()]) throw new CommandError(`Unknown range "${range}". Ranges: ${Object.keys(CONFIG.ranges).join(", ")}`);
+  if (!CONFIG.server) throw new CommandError(SERVER_ONLY);
+  if (range) searchRange.value = range.toLowerCase();
+  searchUser.value = user;
+  lookUp(user, searchRange.value);
+  return { text: `Looking up ${user} (${CONFIG.ranges[searchRange.value]})…` };
+}
+function commandSpeed([speed]) {
+  needPlayer();
+  if (!speed) throw usage("speed");
+  speed = speed.toLowerCase();
+  if (!DATA.timeClasses.includes(speed)) {
+    throw new CommandError(`No ${speed} games here. Speeds: ${DATA.timeClasses.join(", ")}`);
+  }
+  Object.assign(state, { tc: speed, selected: null });
+  renderAll();
+  return { text: `Speed: ${speed === "all" ? "all speeds" : speed}` };
+}
+function commandColor([color]) {
+  needPlayer();
+  if (!color || !COLORS.includes(color.toLowerCase())) throw usage("color");
+  Object.assign(state, { color: color.toLowerCase(), selected: null });
+  renderAll();
+  return { text: `Openings and tree as ${color.toLowerCase()}` };
+}
+function commandGo([section]) {
+  needPlayer();
+  const selector = section && SECTIONS[section.toLowerCase()];
+  if (!selector) throw usage("go");
+  const target = document.querySelector(selector);
+  (target.closest(".panel") || target).scrollIntoView({ behavior: "smooth", block: "start" });
+  return { text: `→ ${section.toLowerCase()}` };
+}
+function commandRange([range]) {
+  if (!range || !CONFIG.ranges[range.toLowerCase()]) throw usage("range");
+  if (!CONFIG.server) throw new CommandError(SERVER_ONLY);
+  needPlayer();
+  return commandUser([DATA.player, range]);
+}
+function commandTheme([theme]) {
+  if (!theme || !THEMES[theme.toLowerCase()]) throw usage("theme");
+  setTheme(theme.toLowerCase());
+  return { text: `Theme: ${THEMES[theme.toLowerCase()].label}` };
+}
+function commandHelp() {
+  const rows = Object.entries(COMMANDS).map(([name, c]) => [`${name} ${c.args}`.trim(), c.about]);
+  const width = Math.max(...rows.map(([usageText]) => usageText.length));
+  return {
+    text: [...rows.map(([usageText, about]) => `${usageText.padEnd(width)}   ${about}`),
+      "", "Tab completes · ↑/↓ earlier commands · / jumps here from anywhere"].join("\n"),
+  };
+}
+
+function completions(words) {
+  if (words.length === 1) return [...Object.keys(COMMANDS), ...SPEEDS, ...COLORS, ...Object.keys(SECTIONS)];
+  const name = words[0].toLowerCase();
+  if (words.length === 2) {
+    return {
+      speed: DATA ? DATA.timeClasses : SPEEDS, color: COLORS, colour: COLORS, go: Object.keys(SECTIONS),
+      range: Object.keys(CONFIG.ranges), theme: Object.keys(THEMES),
+    }[name] || [];
+  }
+  return words.length === 3 && name === "user" ? Object.keys(CONFIG.ranges) : [];
+}
+function showOutput(echo, result) {
+  cmdOutput.replaceChildren();
+  if (!result || result.text === "") return;
+  cmdOutput.append(el("span", { class: "echo" }, `> ${echo}\n`), el("span", { class: result.error ? "error" : null }, result.text));
+}
+
+cmdInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    const line = cmdInput.value.trim();
+    if (!line) return;
+    if (cmdHistory[cmdHistory.length - 1] !== line) cmdHistory.push(line);
+    historyIndex = cmdHistory.length;
+    cmdInput.value = "";
+    showOutput(line, runCommand(line));
+  } else if (event.key === "ArrowUp" && historyIndex > 0) {
+    event.preventDefault();
+    cmdInput.value = cmdHistory[--historyIndex];
+  } else if (event.key === "ArrowDown" && historyIndex < cmdHistory.length) {
+    event.preventDefault();
+    historyIndex += 1;
+    cmdInput.value = cmdHistory[historyIndex] ?? "";
+  } else if (event.key === "Tab" && cmdInput.value.trim()) {
+    const words = cmdInput.value.split(" ");
+    const partial = words[words.length - 1].toLowerCase();
+    const matches = [...new Set(completions(words))].filter((word) => word.startsWith(partial));
+    if (!matches.length) return; // nothing to complete: let Tab move focus as usual
+    event.preventDefault();
+    if (matches.length === 1) {
+      words[words.length - 1] = matches[0];
+      cmdInput.value = words.join(" ") + " ";
+      return;
+    }
+    let prefix = matches[0];
+    while (!matches.every((word) => word.startsWith(prefix))) prefix = prefix.slice(0, -1);
+    words[words.length - 1] = prefix;
+    cmdInput.value = words.join(" ");
+    cmdOutput.replaceChildren(el("span", {}, matches.join("   ")));
+  } else if (event.key === "Escape") {
+    cmdInput.blur();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName);
+  if (event.key === "/" && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault();
+    cmdInput.focus();
+  }
+});
+
 // ---------- start ----------
+renderThemeToggle();
 if (DATA) searchUser.value = DATA.player;
 showReport();
 if (CONFIG.server) {
