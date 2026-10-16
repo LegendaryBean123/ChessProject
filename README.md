@@ -4,6 +4,10 @@ Statistics for any chess.com player: which openings they play and how they score
 how their games end, how they use the clock, and more. It runs in the terminal or as an
 interactive web page.
 
+**[Live demo](https://legendarybean123.github.io/ChessProject/)**: the web report for
+LegendaryBean123. To refresh it, run `python -m chessstats LegendaryBean123 --html docs/index.html`
+and push.
+
 ## Install
 
 You need Python 3.10 or newer.
