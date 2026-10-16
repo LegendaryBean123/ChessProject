@@ -209,6 +209,12 @@ Each phase ends with something runnable. Finish the checkpoint before moving on.
 - [ ] **Phase 13: Revise the command bar's commands.** Details to be decided with the user after
   trying Phase 11's first version.
 
+- [x] **The website on GitHub Pages** (`--pages DIR`, done 2026-10-15 between phases). The search
+  page runs chessstats in the browser with Pyodide (`browser.py`, `templates/pages_worker.js`,
+  `pages.py`); `report_response` in `server.py` is shared so both give the same answers and errors.
+  - ✔ Tested in headless Edge: LegendaryBean123 loaded in ~6 s (1.8 s again from the browser's
+    cache), a missing player showed the server's error, and the time zone matched the computer.
+
 ## Set aside for later
 - Review Phases 9–10 (committed in 32f8402; Phases 11–12 are built on top of them).
 - A double-clickable `.exe` (PyInstaller) for people without Python.

@@ -20,6 +20,24 @@ from chessstats.pipeline import DEFAULT_RANGE, RANGE_LABELS, load_games, range_s
 USERNAME = re.compile(r"[A-Za-z0-9_-]{1,50}")
 
 
+def report_response(username: str, range_key: str, build: Callable[[str, str], dict]) -> tuple[HTTPStatus, dict]:
+    """Check a report request, then build it with `build(username, range_key)`: (status, JSON body).
+
+    Shared by the server's /api/report and the GitHub Pages site (browser.py).
+    """
+    username = username.strip()
+    if not USERNAME.fullmatch(username):
+        return HTTPStatus.BAD_REQUEST, {"error": "Enter a chess.com username (letters, numbers, - and _)."}
+    if range_key not in RANGE_LABELS:
+        return HTTPStatus.BAD_REQUEST, {"error": f"Unknown range '{range_key}'."}
+    try:
+        return HTTPStatus.OK, build(username, range_key)
+    except PlayerNotFound:
+        return HTTPStatus.NOT_FOUND, {"error": f"No chess.com player named '{username}'."}
+    except (requests.RequestException, RuntimeError) as e:
+        return HTTPStatus.BAD_GATEWAY, {"error": f"Could not download games from chess.com: {e}"}
+
+
 class ReportServer(ThreadingHTTPServer):
     daemon_threads = True
 
@@ -84,19 +102,7 @@ class ReportHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
 
     def _report(self, params: dict[str, str]) -> None:
-        username = params.get("user", "").strip()
-        range_key = params.get("range", DEFAULT_RANGE)
-        if not USERNAME.fullmatch(username):
-            return self._json(HTTPStatus.BAD_REQUEST, {"error": "Enter a chess.com username (letters, numbers, - and _)."})
-        if range_key not in RANGE_LABELS:
-            return self._json(HTTPStatus.BAD_REQUEST, {"error": f"Unknown range '{range_key}'."})
-        try:
-            payload = self.server.build_report(username, range_key)
-        except PlayerNotFound:
-            return self._json(HTTPStatus.NOT_FOUND, {"error": f"No chess.com player named '{username}'."})
-        except (requests.RequestException, RuntimeError) as e:
-            return self._json(HTTPStatus.BAD_GATEWAY, {"error": f"Could not download games from chess.com: {e}"})
-        self._json(HTTPStatus.OK, payload)
+        self._json(*report_response(params.get("user", ""), params.get("range", DEFAULT_RANGE), self.server.build_report))
 
     def _json(self, status: HTTPStatus, body: dict) -> None:
         self._send(status, "application/json", json.dumps(body, separators=(",", ":")).encode("utf-8"))

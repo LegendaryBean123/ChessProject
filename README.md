@@ -4,9 +4,8 @@ Statistics for any chess.com player: which openings they play and how they score
 how their games end, how they use the clock, and more. It runs in the terminal or as an
 interactive web page.
 
-**[Live demo](https://legendarybean123.github.io/ChessProject/)**: the web report for
-LegendaryBean123. To refresh it, run `python -m chessstats LegendaryBean123 --html docs/index.html`
-and push.
+**[Try it online](https://legendarybean123.github.io/ChessProject/)**: look up any chess.com
+player in your browser, with nothing to install.
 
 ## Install
 
@@ -40,6 +39,7 @@ Not sure what to type? Run `python -m chessstats` on its own for a few examples,
 | `python -m chessstats NAME --html report.html --open` | An interactive report with charts and a chessboard, saved as one file |
 | `python -m chessstats --serve --open` | A local website where you can look up any player |
 | `python -m chessstats --app` | The same website in its own desktop window |
+| `python -m chessstats --pages docs` | The same website as files for GitHub Pages |
 
 Filters work with every view:
 
@@ -108,8 +108,8 @@ anywhere to jump to it.
 | `theme classic` | Change the look |
 | `help` / `clear` | List every command / clear the output |
 
-Tab completes words, and ↑/↓ bring back earlier commands. Looking up players needs `--serve` or
-`--app`; in a saved `--html` file, the filters and sections still work.
+Tab completes words, and ↑/↓ bring back earlier commands. Looking up players needs `--serve`,
+`--app` or the online site; in a saved `--html` file, the filters and sections still work.
 
 ## The desktop app
 
@@ -123,6 +123,21 @@ chess.com games open in your normal browser. Closing the window stops the app.
 
 `--app` needs the `pywebview` package (included in `requirements.txt`). On Windows it uses Microsoft
 WebView2, which comes with Windows 11.
+
+## The website on GitHub Pages
+
+```
+python -m chessstats --pages docs
+```
+
+writes the player-search website to `docs/` as plain files. GitHub Pages can't run Python, so the
+page runs it in the visitor's browser with [Pyodide](https://pyodide.org) (Python compiled to
+WebAssembly), and the browser downloads games from chess.com itself. The first visit downloads
+about 10 MB for Python; after that the browser has it saved. Downloaded months are kept in the
+browser too.
+
+To publish it: commit and push `docs/`, then in the repository's **Settings → Pages** choose
+**Deploy from a branch**, `main`, folder `/docs`. Rebuild and push `docs/` whenever the code changes.
 
 ## Where games are stored
 

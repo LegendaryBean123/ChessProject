@@ -12,6 +12,7 @@ from chessstats.api import ChessComClient, PlayerNotFound
 from chessstats.app import run_app
 from chessstats.html_report import build_payload, write_report
 from chessstats.insights import summarize
+from chessstats.pages import build_site
 from chessstats.pipeline import load_games
 from chessstats.report import render_openings, render_stats, render_tree
 from chessstats.server import ReportServer
@@ -44,6 +45,7 @@ EXAMPLES = """examples:
   python -m chessstats LegendaryBean123 --html report.html --open
   python -m chessstats --serve --open                       website to search any player
   python -m chessstats --app                                the website in its own desktop window
+  python -m chessstats --pages docs                         the website as files for GitHub Pages
 """
 
 WELCOME = (
@@ -68,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("username", nargs="?", help="chess.com username (optional with --serve and --app)")
+    parser.add_argument("username", nargs="?", help="chess.com username (not needed with --serve, --app or --pages)")
 
     show = parser.add_argument_group("what to show (default: opening tables)").add_mutually_exclusive_group()
     show.add_argument("--stats", action="store_true", help="how games end, game length, clock, rating gap, streaks, time of day")
@@ -76,6 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     show.add_argument("--html", type=Path, metavar="PATH", help="write an interactive HTML report to PATH")
     show.add_argument("--serve", action="store_true", help="run the report as a local website where you can search any player")
     show.add_argument("--app", action="store_true", help="open that website in its own desktop window (needs pywebview)")
+    show.add_argument("--pages", type=Path, metavar="DIR", help="write that website to DIR as files for GitHub Pages")
 
     filters = parser.add_argument_group("filters")
     filters.add_argument("--time-class", choices=TIME_CLASSES, help="only count games of this speed")
@@ -84,7 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     filters.add_argument(
         "--min-games",
         type=positive_int,
-        help="hide openings/branches with fewer games (default 1 for tables, 5 for --tree, 3 for --html/--serve)",
+        help="hide openings/branches with fewer games (default 1 for tables, 5 for --tree, 3 for the web report)",
     )
 
     cache = parser.add_argument_group("download and cache")
@@ -105,10 +108,15 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.open and not (args.html or args.serve):
         parser.error("--open needs --html PATH or --serve")
-    if not args.username and not (args.serve or args.app):
-        parser.error("a username is required (except with --serve or --app)")
+    if not args.username and not (args.serve or args.app or args.pages):
+        parser.error("a username is required (except with --serve, --app or --pages)")
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # tree lines use box-drawing characters
+    if args.pages:
+        build_site(args.pages, args.min_games or DEFAULT_MIN_GAMES["html"])
+        print(f"Website written to {args.pages.resolve()}")
+        return
+
     client = ChessComClient(USER_AGENT)
 
     if args.serve:

@@ -1229,6 +1229,22 @@ async function lookUp(user, range) {
   showNotice("info");
   showLoading(user, CONFIG.ranges[range]);
   const query = `user=${encodeURIComponent(user)}&range=${encodeURIComponent(range)}`;
+  try {
+    DATA = await (CONFIG.worker ? reportFromWorker(user, range) : reportFromServer(user, query));
+    Object.assign(state, { tc: "all", color: "white", selected: null });
+    searchUser.value = DATA.player;
+    history.replaceState(null, "", `?${query}`);
+    showReport();
+    window.scrollTo(0, 0);
+  } catch (error) {
+    const message = error instanceof TypeError ? "Could not reach the chessstats server. Is it still running?" : error.message;
+    showNotice("error", message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function reportFromServer(user, query) {
   let finished = false;
   (async () => { // poll download progress while the report is being built
     while (!finished) {
@@ -1244,19 +1260,37 @@ async function lookUp(user, range) {
     const response = await fetch(`/api/report?${query}`);
     const body = await response.json();
     if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
-    DATA = body;
-    Object.assign(state, { tc: "all", color: "white", selected: null });
-    searchUser.value = DATA.player;
-    history.replaceState(null, "", `?${query}`);
-    showReport();
-    window.scrollTo(0, 0);
-  } catch (error) {
-    const message = error instanceof TypeError ? "Could not reach the chessstats server. Is it still running?" : error.message;
-    showNotice("error", message);
+    return body;
   } finally {
     finished = true;
-    hideLoading();
   }
+}
+
+// On GitHub Pages there is no server: the worker runs chessstats' Python in this browser.
+let worker = null;
+let lastRequest = 0;
+const waiting = new Map(); // request id -> { resolve, reject }
+function startWorker() {
+  worker = new Worker(CONFIG.worker);
+  worker.onmessage = ({ data }) => {
+    if (data.progress) return updateLoading(data.progress);
+    const request = waiting.get(data.id);
+    waiting.delete(data.id);
+    if (data.error) request.reject(new Error(data.error));
+    else request.resolve(data.report);
+  };
+  worker.onerror = (event) => {
+    for (const request of waiting.values()) request.reject(new Error(`Could not start Python in this browser: ${event.message}`));
+    waiting.clear();
+  };
+}
+function reportFromWorker(user, range) {
+  if (!worker) startWorker();
+  const id = ++lastRequest;
+  return new Promise((resolve, reject) => {
+    waiting.set(id, { resolve, reject });
+    worker.postMessage({ id, user, range });
+  });
 }
 
 // ---------- loading screen ----------
@@ -1275,6 +1309,12 @@ function showLoading(user, rangeLabel) {
   loadingEl.hidden = false;
 }
 function updateLoading(progress) {
+  if (progress.status) { // a step before the download, e.g. starting Python on GitHub Pages
+    const title = document.getElementById("loading-title").textContent.replace(/^Loading /, "");
+    document.getElementById("loading-status").textContent = progress.status;
+    document.getElementById("loading-text").textContent = `$ chessstats ${title}\n${progress.status}`;
+    return;
+  }
   if (!progress.total) return;
   const bar = document.getElementById("loading-progress");
   bar.className = "progress";
@@ -1476,6 +1516,7 @@ document.addEventListener("keydown", (event) => {
 renderThemeToggle();
 if (DATA) searchUser.value = DATA.player;
 showReport();
+if (CONFIG.worker) startWorker(); // start Python now, so it's ready by the first search
 if (CONFIG.server) {
   const params = new URLSearchParams(location.search);
   if (CONFIG.ranges[params.get("range")]) searchRange.value = params.get("range");

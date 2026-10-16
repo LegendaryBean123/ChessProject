@@ -157,9 +157,15 @@ def test_page_without_a_player_for_the_server():
     config = json.loads(embedded_json(html, "config"))
     assert config == {
         "server": True,
+        "worker": None,
         "ranges": {"year": "This year", "12months": "Last 12 months", "all": "All time"},
         "defaultRange": "year",
     }
+
+
+def test_page_for_github_pages_names_its_worker():
+    config = json.loads(embedded_json(render_page(None, server=True, worker="worker.js"), "config"))
+    assert config["server"] is True and config["worker"] == "worker.js"
 
 
 def embedded_json(html: str, tag_id: str) -> str:

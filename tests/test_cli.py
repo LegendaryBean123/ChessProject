@@ -129,6 +129,12 @@ def test_serve_starts_the_server(tmp_path, monkeypatch, capsys):
     assert "http://127.0.0.1:8123/?user=LegendaryBean123" in out
 
 
+def test_pages_writes_the_website_without_a_username(tmp_path, capsys):
+    cli.main(["--pages", str(tmp_path / "docs")])
+    assert "Website written to" in capsys.readouterr().out
+    assert sorted(p.name for p in (tmp_path / "docs").iterdir()) == ["chessstats.zip", "index.html", "worker.js"]
+
+
 def test_stats_flag(tmp_path, capsys):
     cli.main(["LegendaryBean123", "--stats", "--data-dir", str(tmp_path)])
     out, _ = capsys.readouterr()

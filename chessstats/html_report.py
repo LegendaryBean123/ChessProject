@@ -58,12 +58,13 @@ def build_payload(
     }
 
 
-def render_page(payload: dict | None, server: bool) -> str:
+def render_page(payload: dict | None, server: bool, worker: str | None = None) -> str:
     """The report page. `payload` may be None for an empty page that asks for a username.
 
-    `server` tells the page whether it can look up other players from the local server.
+    `server` tells the page whether it can look up other players. It asks the local server,
+    or, if `worker` is the URL of the GitHub Pages worker script, Python in the browser.
     """
-    config = {"server": server, "ranges": RANGE_LABELS, "defaultRange": DEFAULT_RANGE}
+    config = {"server": server, "worker": worker, "ranges": RANGE_LABELS, "defaultRange": DEFAULT_RANGE}
     template = files("chessstats").joinpath(TEMPLATE).read_text(encoding="utf-8")
     return template.replace(CONFIG_PLACEHOLDER, _json_for_html(config)).replace(
         DATA_PLACEHOLDER, _json_for_html(payload)
